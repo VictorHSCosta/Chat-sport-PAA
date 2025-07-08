@@ -1,21 +1,22 @@
 from langchain.text_splitter import CharacterTextSplitter
-from langchain.embeddings import HuggingFaceEmbeddings
-from langchain.vectorstores import FAISS
+from langchain_community.embeddings import HuggingFaceEmbeddings
+from langchain_community.vectorstores import FAISS
 from langchain.chains import RetrievalQA
 from langchain_community.llms import Ollama
+from langchain_core.documents import Document
 
 def load_text_file(path):
     with open(path, 'r', encoding='utf-8') as f:
         text = f.read()
-    return [{"page_content": text}]
+    return [Document(page_content=text, metadata={"source": path})]
 
-documents = load_text_file("data.txt")  
+documents = load_text_file("data.txt")
 
 text_splitter = CharacterTextSplitter(chunk_size=1000, chunk_overlap=30, separator="\n")
 docs = text_splitter.split_documents(documents)
 
 embedding_model_name = "sentence-transformers/all-mpnet-base-v2"
-model_kwargs = {"device": "cuda"} 
+model_kwargs = {"device": "cuda"}
 embeddings = HuggingFaceEmbeddings(model_name=embedding_model_name, model_kwargs=model_kwargs)
 
 vectorstore = FAISS.from_documents(docs, embeddings)
