@@ -1,6 +1,18 @@
 import { useState } from 'react'
 import { Sparkles } from 'lucide-react'
-import { suggestedQuestions } from '../footballData.js'
+
+const suggestedQuestions = [
+  "Quando foi a última Copa do Mundo?",
+  "Quem é o maior jogador de todos os tempos?",
+  "Quantas Champions League o Real Madrid tem?",
+  "Qual time tem mais Brasileirões?",
+  "Quem ganhou a Bola de Ouro de 2024?",
+  "Como está o Palmeiras este ano?",
+  "Qual a história do Pelé?",
+  "Quando é a próxima Copa do Mundo?",
+  "Quem são os maiores artilheiros da história?",
+  "Qual o maior clássico do futebol brasileiro?"
+]
 
 const WelcomeMessage = ({ onExampleClick }) => {
   const examplePrompts = [
