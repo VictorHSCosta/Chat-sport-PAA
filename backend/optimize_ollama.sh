@@ -29,8 +29,11 @@ time ollama run tinyllama "Hello, respond in Portuguese"
 
 echo "🔧 Configurações recomendadas para performance:"
 echo "- Modelo: tinyllama (mais rápido)"
-echo "- num_predict: 100 (respostas menores)"
+echo "- num_predict: 300 (respostas completas)"
 echo "- temperature: 0.2 (mais determinístico)"
-echo "- timeout: 45s (backend) + 50s (frontend)"
+echo "- backend timeout: 120s"
+echo "- frontend timeout: 150s"
+echo "- llm timeout: 60s por chamada"
 
 echo "✅ Otimização concluída!"
+echo "🎯 Timeouts estendidos para respostas completas!"

@@ -6,22 +6,22 @@ Sistema de chat especializado em futebol usando **RAG (Retrieval-Augmented Gener
 
 - **Respostas em cache**: < 0.5 segundos ⚡
 - **Perguntas sobre Pelé, Messi, Copa**: < 0.5 segundos ⚡  
-- **Outras perguntas**: 1-3 segundos 🚀
-- **Timeout máximo**: 3 segundos com fallback inteligente
+- **Outras perguntas**: 3-30 segundos 🚀
+- **Timeout máximo**: 150 segundos para respostas completas
 
 ## 🏗️ Arquitetura
 
 ### Backend (FastAPI + RAG)
 - **LLM**: Ollama (tinyllama) ultra-otimizado
 - **Embeddings**: sentence-transformers/all-MiniLM-L6-v2 (rápido)
-- **Vector Store**: FAISS com chunks de 300 caracteres
+- **Vector Store**: FAISS com chunks de 200 caracteres
 - **Cache inteligente**: Respostas instantâneas para perguntas frequentes
-- **Timeout agressivo**: 3 segundos com fallback
+- **Timeout estendido**: 120s backend + 150s frontend para respostas completas
 
 ### Frontend (React + Vite)
 - Interface de chat moderna e responsiva
 - Indicador de status da API em tempo real
-- Timeout otimizado no cliente (15 segundos)
+- Timeout estendido no cliente (150 segundos)
 - Sugestões de perguntas interativas
 
 ## 🚀 Instalação Rápida
@@ -83,11 +83,12 @@ Respostas instantâneas para:
 - "Brasil"
 - E muito mais...
 
-### LLM Ultra-Otimizado
-- Temperatura: 0.1 (respostas diretas)
-- Máximo: 30 tokens
-- Stop words para evitar respostas longas
-- Timeout: 3 segundos
+### LLM Otimizado para Respostas Completas
+- Temperatura: 0.2 (respostas consistentes)
+- Máximo: 300 tokens (respostas completas)
+- Stop words melhorados para evitar cortes
+- Timeout: 120 segundos para processamento completo
+- LLM timeout: 60 segundos por chamada
 
 ### Retrieval Otimizado
 - Chunks: 300 caracteres (vs 1000 antes)
@@ -182,6 +183,28 @@ pnpm install
 1. Verificar se Ollama está saudável: `ollama list`
 2. Usar perguntas mais simples
 3. Verificar cache: perguntas sobre Pelé devem ser instantâneas
+
+## 🔍 Debug e Análise
+
+### Endpoint de Debug
+Para análise detalhada das respostas:
+```bash
+curl -X POST "http://localhost:8000/chat-debug" \
+     -H "Content-Type: application/json" \
+     -d '{"message": "fale sobre messi"}' | jq '.'
+```
+
+### Monitoramento em Tempo Real
+- **Logs do backend**: Mostram processo completo de geração
+- **Status da API**: http://localhost:8000/status
+- **Teste de respostas completas**: `./backend/test_complete_responses.sh`
+
+### Verificando Respostas Incompletas
+Se as respostas estão sendo cortadas:
+1. Use `/chat-debug` para análise detalhada
+2. Verifique logs do backend para tokens gerados
+3. Aumente `num_predict` se necessário
+4. Verifique se o modelo Ollama está saudável
 
 ## 🤝 Contribuindo
 

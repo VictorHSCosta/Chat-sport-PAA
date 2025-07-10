@@ -7,7 +7,7 @@ export const API_CONFIG = {
     health: '/health',
     root: '/'
   },
-  timeout: 50000
+  timeout: 150000
 }
 
 export class FootballAPI {

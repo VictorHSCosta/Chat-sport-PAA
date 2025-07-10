@@ -1,5 +1,6 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from langchain.text_splitter import CharacterTextSplitter
 from langchain_community.embeddings import HuggingFaceEmbeddings
@@ -10,6 +11,8 @@ from langchain_community.llms import Ollama
 from langchain_core.documents import Document
 import uvicorn
 import os
+import json
+import asyncio
 
 class QuestionRequest(BaseModel):
     message: str
@@ -121,12 +124,12 @@ def initialize_rag_system():
             model="tinyllama",
             temperature=0.2,
             top_p=0.8,
-            num_predict=100,
+            num_predict=300,
             repeat_penalty=1.05,
-            stop=["Human:", "Assistant:", "\n\nHuman:", "\n\nAssistant:"],
-            timeout=30
+            stop=["Human:", "Assistant:", "\n\nHuman:", "\n\nAssistant:", "Pergunta:", "Resposta:"],
+            timeout=60
         )
-        print("✅ [DEBUG] LLM inicializado com configurações otimizadas!")
+        print("✅ [DEBUG] LLM inicializado com tokens aumentados e timeout de 60s!")
         
         print("🧪 [DEBUG] Testando conexão com Ollama...")
         try:
@@ -139,13 +142,13 @@ def initialize_rag_system():
         print("🔗 [DEBUG] Criando sistema de perguntas e respostas...")
         retriever = persisted_vectorstore.as_retriever(search_kwargs={"k": 2})
         
-        # Template personalizado em português - otimizado para respostas rápidas
-        template = """Baseado nas informações sobre futebol abaixo, responda de forma DIRETA e CONCISA em português brasileiro:
+        # Template personalizado em português - otimizado para respostas completas
+        template = """Com base nas informações sobre futebol, responda em português brasileiro de forma completa:
 
 {context}
 
 Pergunta: {question}
-Resposta:"""
+Resposta completa:"""
         
         prompt = PromptTemplate(
             template=template,
@@ -245,17 +248,19 @@ async def ask_question(request: QuestionRequest):
         with ThreadPoolExecutor() as executor:
             future = executor.submit(run_qa_system)
             try:
-                response = future.result(timeout=45)
+                response = future.result(timeout=120)
             except FutureTimeoutError:
                 return QuestionResponse(
                     answer="Sua pergunta está demorando para processar. O sistema pode estar sobrecarregado. Tente novamente em alguns instantes.",
                     success=True,
-                    message="Timeout - sistema sobrecarregado"
+                    message="Timeout - sistema sobrecarregado (120s)"
                 )
         
         end_time = time.time()
-        print(f"⏰ [DEBUG] Tempo final: {end_time}, duração: {end_time - start_time:.2f}s")
-        print(f"✅ [DEBUG] Resposta recebida: {response}")
+        duration = end_time - start_time
+        print(f"⏰ [DEBUG] Tempo final: {end_time}, duração: {duration:.2f}s")
+        print(f"✅ [DEBUG] Resposta recebida (tipo: {type(response)})")
+        print(f"📝 [DEBUG] Resposta completa: {response}")
         
         if isinstance(response, dict) and "result" in response:
             answer = response["result"]
@@ -265,7 +270,15 @@ async def ask_question(request: QuestionRequest):
             print(f"⚠️ [DEBUG] Formato de resposta inesperado: {type(response)}")
             answer = str(response)
         
-        print(f"📤 [DEBUG] Enviando resposta: {answer[:100]}...")
+        # Validação de resposta completa
+        if len(answer.strip()) < 20:
+            print(f"⚠️ [DEBUG] Resposta muito curta ({len(answer)} chars), pode estar incompleta")
+        
+        # Remove possíveis artifacts do template
+        answer = answer.replace("Responda de forma DIRETA e CONCISA em português brasileiro:", "").strip()
+        answer = answer.replace("Baseado nas informações sobre futebol abaixo:", "").strip()
+        
+        print(f"📤 [DEBUG] Enviando resposta limpa ({len(answer)} chars): {answer[:200]}...")
         
         # Salva resposta no cache automático para acelerar futuras consultas
         cache_key = request.message.lower().strip()
@@ -309,17 +322,106 @@ async def status_check():
         "quick_answers": len(QUICK_ANSWERS),
         "model_config": {
             "model": "tinyllama",
-            "timeout": "45s backend + 50s frontend",
+            "timeout": "120s backend + 150s frontend",
             "chunk_size": 200,
             "retriever_k": 2,
-            "num_predict": 100
+            "num_predict": 300,
+            "temperature": 0.2,
+            "stop_tokens": ["Human:", "Assistant:", "Pergunta:", "Resposta:"],
+            "llm_timeout": "60s"
         },
         "performance": {
             "cache_response_time": "< 0.5s",
-            "rag_response_time": "3-12s",
-            "total_timeout": "50s"
-        }
+            "rag_response_time": "3-30s",
+            "total_timeout": "150s"
+        },
+        "debug_endpoint": "/chat-debug (verbose logging)"
     }
+
+@app.post("/chat-debug", response_model=QuestionResponse)
+async def ask_question_debug(request: QuestionRequest):
+    """Endpoint de debug que mostra informações detalhadas da resposta"""
+    
+    print(f"🔥 [DEBUG-VERBOSE] Recebida requisição: {request.message}")
+    
+    if qa_system is None:
+        print("❌ [DEBUG] Sistema RAG não está inicializado!")
+        raise HTTPException(
+            status_code=500,
+            detail="Sistema RAG não inicializado. Verifique os logs do servidor."
+        )
+    
+    quick_answer = get_quick_answer(request.message)
+    if quick_answer:
+        print("⚡ [DEBUG] Resposta rápida encontrada!")
+        return QuestionResponse(
+            answer=f"⚡ **Resposta Rápida**: {quick_answer}",
+            success=True,
+            message="Resposta rápida do cache"
+        )
+    
+    cache_key = request.message.lower().strip()
+    if cache_key in response_cache:
+        print("💾 [DEBUG] Resposta encontrada no cache!")
+        return QuestionResponse(
+            answer=f"💾 **Do Cache**: {response_cache[cache_key]}",
+            success=True,
+            message="Resposta do cache"
+        )
+    
+    try:
+        print("🔍 [DEBUG-VERBOSE] Iniciando invoke do qa_system...")
+        print(f"📝 [DEBUG-VERBOSE] Query original: '{request.message}'")
+        
+        # Busca documentos relevantes primeiro
+        retriever = qa_system.retriever
+        docs = retriever.get_relevant_documents(request.message)
+        print(f"📚 [DEBUG-VERBOSE] Documentos encontrados: {len(docs)}")
+        for i, doc in enumerate(docs):
+            print(f"📄 [DEBUG-VERBOSE] Doc {i+1}: {doc.page_content[:100]}...")
+        
+        import time
+        start_time = time.time()
+        
+        # Invoke manual para mais controle
+        response = qa_system.invoke({"query": request.message})
+        
+        end_time = time.time()
+        duration = end_time - start_time
+        
+        print(f"⏰ [DEBUG-VERBOSE] Duração: {duration:.2f}s")
+        print(f"📋 [DEBUG-VERBOSE] Resposta bruta: {response}")
+        print(f"🔍 [DEBUG-VERBOSE] Tipo da resposta: {type(response)}")
+        
+        if isinstance(response, dict) and "result" in response:
+            answer = response["result"]
+            print(f"📝 [DEBUG-VERBOSE] Result extraído: '{answer}'")
+        else:
+            answer = str(response)
+            print(f"📝 [DEBUG-VERBOSE] Resposta convertida: '{answer}'")
+        
+        # Limpeza da resposta
+        answer = answer.replace("Com base nas informações sobre futebol, responda em português brasileiro de forma completa:", "").strip()
+        answer = answer.replace("Resposta completa:", "").strip()
+        
+        print(f"✨ [DEBUG-VERBOSE] Resposta final limpa ({len(answer)} chars): '{answer}'")
+        
+        # Salva no cache
+        if len(response_cache) < 50:
+            response_cache[cache_key] = answer
+            print("💾 [DEBUG-VERBOSE] Resposta salva no cache!")
+        
+        return QuestionResponse(
+            answer=f"🤖 **RAG/LLM** ({duration:.1f}s): {answer}",
+            success=True,
+            message=f"Processado em {duration:.1f}s com {len(docs)} documentos"
+        )
+        
+    except Exception as e:
+        print(f"❌ [DEBUG-VERBOSE] Erro detalhado: {str(e)}")
+        import traceback
+        print(f"❌ [DEBUG-VERBOSE] Traceback: {traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail=f"Erro: {str(e)}")
 
 if __name__ == "__main__":
     uvicorn.run(

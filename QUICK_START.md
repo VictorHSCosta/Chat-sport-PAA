@@ -49,7 +49,10 @@ chmod +x start_simple.sh
 ✅ **Solução**: Execute `./backend/optimize_ollama.sh` para otimizar
 
 ### "Respostas muito lentas"
-✅ **Solução**: Timeout aumentado para 50s, aguarde um pouco mais
+✅ **Solução**: Timeout aumentado para 150s, aguarde mais tempo
+
+### "Respostas sendo cortadas"
+✅ **Solução**: Sistema configurado para 300 tokens e timeout de 120s
 
 ### "Dependências não instaladas"
 ✅ **Solução**: Os scripts instalam automaticamente
@@ -59,9 +62,9 @@ chmod +x start_simple.sh
 - **Primeira execução**: 30-60 segundos (instala tudo)
 - **Execuções seguintes**: 5-10 segundos
 - **Respostas em cache**: < 0.5 segundos (saudações, copas, notícias básicas)
-- **Respostas RAG**: 3-12 segundos (primeira vez, otimizado)
+- **Respostas RAG**: 3-30 segundos (primeira vez, otimizado)
 - **Respostas cached do RAG**: < 1 segundo (perguntas repetidas)
-- **Timeout máximo**: 50 segundos (aumentado para estabilidade)
+- **Timeout máximo**: 150 segundos (aumentado para estabilidade máxima)
 
 ## 🧪 Teste Rápido
 
