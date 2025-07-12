@@ -151,10 +151,15 @@ log_info "Preparando sistema RAG ultra-restritivo..."
 cd ~/Chat-sport-PAA/backend
 source footbot/bin/activate
 
-# Remover índice antigo para forçar recriação com dados ultra-estruturados
+# Remover índices antigos para forçar recriação com dados ultra-estruturados
 if [ -d "faiss_index_" ]; then
     rm -rf faiss_index_
-    log_info "Índice antigo removido - será recriado com dados ultra-estruturados"
+    log_info "Índice antigo removido"
+fi
+
+if [ -d "faiss_index_enhanced_" ]; then
+    rm -rf faiss_index_enhanced_
+    log_info "Índice avançado antigo removido"
 fi
 
 # Testar se conseguimos importar os módulos necessários
@@ -166,8 +171,9 @@ try:
     import glob
     from langchain_community.vectorstores import FAISS
     from langchain_community.embeddings import HuggingFaceEmbeddings
-    from langchain.text_splitter import CharacterTextSplitter
+    from langchain.text_splitter import RecursiveCharacterTextSplitter
     from langchain_core.documents import Document
+    from sentence_transformers import SentenceTransformer
     
     # Verificar se conseguimos carregar os CSVs
     csv_files = glob.glob(os.path.join('wcdataset', '*.csv'))
@@ -196,13 +202,49 @@ except Exception as e:
 "
 
 if [ $? -eq 0 ]; then
-    log_success "Sistema RAG verificado com sucesso"
+    log_success "Dependências do sistema RAG verificadas"
 else
-    log_error "Erro na verificação do sistema RAG"
+    log_error "Erro na verificação das dependências do sistema RAG"
     exit 1
 fi
 
-log_success "Sistema RAG ultra-restritivo verificado - índice será criado automaticamente na primeira execução"
+# Criar índice FAISS ultra-avançado durante o setup
+log_info "Criando índice FAISS ultra-avançado..."
+echo "🏗️ Processando dados da Copa do Mundo com configurações ultra-avançadas:"
+echo "   • Chunking multi-nível: 300/800/1500 caracteres"
+echo "   • Embedding multilíngue: paraphrase-multilingual-mpnet-base-v2"
+echo "   • Retriever MMR para máxima precisão (k=8, fetch_k=20, λ=0.7)"
+echo "   • Processamento em lotes para eficiência"
+echo "   • Normalização de embeddings ativada"
+echo "   ⏱️ Este processo pode demorar 3-5 minutos na primeira vez..."
+echo "   💡 Aguarde, isso é feito apenas uma vez no setup!"
+echo ""
+
+if python -c "from api import setup_rag_system; setup_rag_system()"; then
+    log_success "Índice FAISS ultra-avançado criado com sucesso!"
+    echo "📊 Estatísticas do índice criado:"
+    if [ -f "faiss_index_enhanced_/index.pkl" ]; then
+        python -c "
+import pickle
+try:
+    with open('faiss_index_enhanced_/index.pkl', 'rb') as f:
+        vectorstore = pickle.load(f)
+    print(f'   • Total de documentos indexados: {len(vectorstore.docstore._dict)}')
+    print('   • Sistema pronto para consultas ultra-precisas!')
+except Exception as e:
+    print(f'   • Índice criado (erro ao ler estatísticas: {e})')
+"
+    fi
+else
+    log_error "Falha ao criar índice FAISS ultra-avançado"
+    echo "💡 Possíveis soluções:"
+    echo "   1. Verifique se o Ollama está rodando: ollama serve"
+    echo "   2. Verifique se os modelos estão instalados: ollama list"
+    echo "   3. Verifique se há espaço em disco suficiente"
+    exit 1
+fi
+
+log_success "Sistema RAG ultra-restritivo configurado e índice criado!"
 
 # 9. Verificar configuração do modelo no backend
 log_info "Verificando configuração do modelo no backend..."
@@ -273,8 +315,10 @@ echo "   • Modelo principal: qwen2.5:3b (otimizado para português)"
 echo "   • Modelo fallback: llama3.2"
 echo "   • Dados ultra-estruturados para evitar alucinações"
 echo "   • Distinção clara entre sede e campeão"
-echo "   • Chunks focados de 600 caracteres"
-echo "   • Retriever com k=3, threshold=0.2"
+echo "   • Chunking multi-nível: 300/800/1500 caracteres"
+echo "   • Embedding multilíngue: paraphrase-multilingual-mpnet-base-v2"
+echo "   • Retriever MMR: k=8, fetch_k=20, λ=0.7"
+echo "   • Índice FAISS ultra-avançado PRÉ-CRIADO ✅"
 echo ""
 echo "📚 Dados disponíveis:"
 echo "   • Histórico completo da Copa do Mundo (1930-2022)"
@@ -283,7 +327,7 @@ echo "   • Múltiplas variações de perguntas em português"
 echo "   • Rankings FIFA atualizados"
 echo "   • Estatísticas de partidas detalhadas"
 echo ""
-echo "🚀 Para iniciar o sistema:"
+echo "🚀 Para iniciar o sistema (rápido, índice já criado):"
 echo "   ./start.sh"
 echo ""
 echo "🌐 Acesse o chatbot em:"
@@ -305,4 +349,11 @@ echo "⚠️  Sistema configurado para evitar confusão entre:"
 echo "   • SEDE (onde aconteceu) ≠ CAMPEÃO (quem ganhou)"
 echo "   • Exemplo: Copa 2022 - SEDE: Qatar, CAMPEÃO: Argentina"
 echo ""
-log_success "Configuração concluída com sucesso!"
+echo "⚡ Performance esperada (após setup completo):"
+echo "   • Saudações: instantâneo"
+echo "   • Perguntas sobre campeões: < 2s"
+echo "   • Perguntas sobre artilheiros: < 3s"
+echo "   • Perguntas complexas: 3-5s"
+echo "   • Inicialização rápida: ~15s (índice pré-criado!)"
+echo ""
+log_success "Setup completo! Sistema pronto para uso ultra-rápido!"

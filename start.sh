@@ -4,6 +4,9 @@
 echo "🏆 Iniciando World Cup RAG Chatbot Ultra-Otimizado"
 echo "⚡ Sistema Ultra-Restritivo para Copa do Mundo FIFA"
 echo "🧠 Modelo: qwen2.5:3b (português) + llama3.2 (fallback)"
+echo "📦 Índice FAISS: pré-criado para inicialização rápida"
+echo ""
+echo "💡 Se ainda não executou o setup: ./setup.sh"
 echo ""
 
 # Cores para output
@@ -114,60 +117,66 @@ check_python_deps() {
     log_success "Dependências Python verificadas"
 }
 
-# Otimizar índice FAISS ultra-restritivo se necessário
-optimize_index() {
-    log_info "Verificando índice FAISS ultra-restritivo..."
+# Verificar se índice FAISS existe (deve ter sido criado no setup)
+check_faiss_index() {
+    log_info "Verificando índice FAISS pré-criado..."
     cd ~/Chat-sport-PAA/backend
     source footbot/bin/activate
     
-    if [ ! -f "faiss_index_/index.faiss" ]; then
-        log_warning "Índice FAISS não encontrado"
-        echo "🏗️ Criando índice FAISS ultra-restritivo para Copa do Mundo..."
-        echo "   • Dados estruturados para evitar confusão sede/campeão"
-        echo "   • Múltiplas variações de perguntas em português"
-        echo "   • Chunks de 600 caracteres com overlap 50"
-        if python -c "from api import initialize_rag_system; initialize_rag_system()"; then
-            log_success "Índice FAISS ultra-restritivo criado"
-        else
-            log_error "Falha ao criar índice FAISS"
-            exit 1
-        fi
+    if [ ! -f "faiss_index_enhanced_/index.faiss" ] || [ ! -f "faiss_index_enhanced_/index.pkl" ]; then
+        log_error "Índice FAISS não encontrado!"
+        echo "💡 O índice FAISS deve ser criado durante o setup."
+        echo "   Execute primeiro: ./setup.sh"
+        echo "   Isso criará o índice ultra-avançado (demora 3-5min apenas uma vez)"
+        exit 1
     else
-        # Verificar se o índice é antigo (mais de 1 dia)
-        if find "faiss_index_/index.faiss" -mtime +1 2>/dev/null | grep -q .; then
-            log_warning "Índice FAISS é antigo, recriando versão ultra-restritiva..."
-            rm -rf faiss_index_/
-            python -c "from api import initialize_rag_system; initialize_rag_system()"
-        else
-            log_success "Índice FAISS ultra-restritivo está atualizado"
-        fi
+        log_success "Índice FAISS ultra-avançado encontrado e pronto!"
+        
+        # Mostrar estatísticas do índice
+        python -c "
+import pickle
+import os
+try:
+    with open('faiss_index_enhanced_/index.pkl', 'rb') as f:
+        vectorstore = pickle.load(f)
+    doc_count = len(vectorstore.docstore._dict)
+    print(f'   📊 Documentos indexados: {doc_count}')
+    
+    # Verificar tamanho do índice
+    index_size = os.path.getsize('faiss_index_enhanced_/index.faiss')
+    size_mb = index_size / (1024*1024)
+    print(f'   📦 Tamanho do índice: {size_mb:.1f} MB')
+    print('   ⚡ Sistema pronto para consultas ultra-rápidas!')
+except Exception as e:
+    print(f'   ⚠️ Índice existe mas erro ao ler detalhes: {e}')
+"
     fi
 }
 
-# Função para iniciar backend ultra-otimizado
+# Função para iniciar backend ultra-avançado
 start_backend() {
-    log_info "Iniciando backend ultra-otimizado..."
+    log_info "Iniciando backend ultra-avançado..."
     cd ~/Chat-sport-PAA/backend
     source footbot/bin/activate
     
     echo ""
-    echo "🎯 Configurações Ultra-Restritivas:"
-    echo "   - Modelo principal: qwen2.5:3b (otimizado para português)"
-    echo "   - Modelo fallback: llama3.2"
-    echo "   - Dados ultra-estruturados (sede ≠ campeão)"
+    echo "🎯 Configurações Ultra-Avançadas:"
+    echo "   - Modelo LLM: qwen2.5:3b (otimizado para português)"
+    echo "   - Modelo Embedding: paraphrase-multilingual-mpnet-base-v2"
+    echo "   - Chunking Multi-Nível: 300/800/1500 caracteres"
+    echo "   - Retriever MMR: k=8, fetch_k=20, λ=0.7"
+    echo "   - Processamento em lotes para eficiência"
+    echo "   - Normalização de embeddings ativada"
     echo "   - Cache inteligente ativado"
-    echo "   - Respostas rápidas para Copa do Mundo"
-    echo "   - Timeout otimizado: 60 segundos"
-    echo "   - Chunks ultra-focados: 600 caracteres"
-    echo "   - Retriever: k=3, threshold=0.2"
+    echo "   - Timeout otimizado: 90 segundos"
     echo "   - Anti-alucinação máximo ativado"
     echo "   - Temperatura: 0.0 (determinístico)"
     echo ""
     
-    log_success "Backend ultra-restritivo iniciado em http://localhost:8000"
+    log_success "Backend ultra-avançado iniciado em http://localhost:8000"
     echo "📊 Documentação: http://localhost:8000/docs"
     echo "🔍 Health check: http://localhost:8000/health"
-    echo "📈 Status: http://localhost:8000/status"
+    echo "📈 Status avançado: http://localhost:8000/status"
     echo ""
     
     python api.py
@@ -209,7 +218,7 @@ start_frontend() {
 
 # Verificar dependências
 check_python_deps
-optimize_index
+check_faiss_index
 
 # Verificar argumentos
 case "$1" in
@@ -227,30 +236,40 @@ case "$1" in
         ./test_performance.sh
         ;;
     "optimize")
-        log_info "Recriando índice FAISS ultra-restritivo..."
+        log_warning "Para recriar o índice FAISS, use o setup.sh!"
+        echo "💡 O índice ultra-avançado deve ser criado/recriado no setup:"
+        echo "   ./setup.sh"
+        echo ""
+        echo "🤔 Se realmente quiser recriar apenas o índice:"
         cd ~/Chat-sport-PAA/backend
         source footbot/bin/activate
-        rm -rf faiss_index_/
-        python -c "from api import initialize_rag_system; initialize_rag_system()"
-        log_success "Índice ultra-restritivo recriado!"
+        rm -rf faiss_index_enhanced_/
+        echo "🏗️ Recriando índice ultra-avançado..."
+        echo "   ⏱️ Isso pode demorar 3-5 minutos..."
+        if python -c "from api import initialize_rag_system; initialize_rag_system()"; then
+            log_success "Índice ultra-avançado recriado!"
+        else
+            log_error "Falha ao recriar índice. Execute ./setup.sh"
+        fi
         ;;
     "both"|"")
-        echo "🔄 Iniciando backend e frontend ultra-otimizados..."
+        echo "🔄 Iniciando backend e frontend ultra-avançados..."
         echo ""
         
         # Iniciar backend em background
         start_backend &
         BACKEND_PID=$!
         
-        # Aguardar backend inicializar
-        log_info "Aguardando backend ultra-restritivo inicializar..."
-        sleep 10
+        # Aguardar backend inicializar (muito mais rápido com índice pré-criado)
+        log_info "Aguardando backend ultra-avançado inicializar..."
+        echo "   ⚡ Inicialização rápida com índice pré-criado..."
+        sleep 8
         
         # Verificar se backend está funcionando
         if curl -s http://localhost:8000/health > /dev/null; then
-            log_success "Backend ultra-restritivo inicializado com sucesso"
+            log_success "Backend ultra-avançado inicializado com sucesso"
         else
-            log_warning "Backend pode estar demorando para inicializar (normal na primeira vez)"
+            log_warning "Backend ainda inicializando (aguarde mais alguns segundos)"
         fi
         
         # Iniciar frontend
@@ -258,22 +277,30 @@ case "$1" in
         FRONTEND_PID=$!
         
         echo ""
-        log_success "Sistema ultra-otimizado iniciado!"
+        log_success "Sistema ultra-avançado iniciado!"
         echo ""
         echo "🎯 URLs importantes:"
         echo "   📊 Backend API: http://localhost:8000"
         echo "   📚 Docs API: http://localhost:8000/docs"
-        echo "   📈 Status: http://localhost:8000/status"
+        echo "   📈 Status avançado: http://localhost:8000/status"
         echo "   🌐 Frontend: http://localhost:5173"
         echo ""
-        echo "⚡ Performance esperada (sistema ultra-restritivo):"
+        echo "⚡ Performance esperada (índice pré-criado):"
+        echo "   - Inicialização: ~15s (super rápida!)"
         echo "   - Saudações: instantâneo"
-        echo "   - Perguntas sobre campeões: < 1s"
-        echo "   - Perguntas sobre artilheiros: < 2s"
-        echo "   - Outras perguntas: 2-4s"
-        echo "   - Timeout máximo: 60s"
+        echo "   - Perguntas sobre campeões: < 2s"
+        echo "   - Perguntas sobre artilheiros: < 3s"
+        echo "   - Perguntas complexas: 3-5s"
+        echo "   - Timeout máximo: 90s"
         echo ""
-        echo "🧠 Exemplos testados:"
+        echo "🧠 Melhorias implementadas:"
+        echo "   • Chunking multi-nível (300/800/1500 chars)"
+        echo "   • Embedding multilíngue otimizado"
+        echo "   • Retriever MMR para máxima precisão"
+        echo "   • Processamento em lotes"
+        echo "   • Normalização de embeddings"
+        echo ""
+        echo "🧪 Exemplos testados:"
         echo "   'Quem foi campeão em 2022?' → Argentina (não Qatar)"
         echo "   'Quem foi campeão em 2002?' → Brasil (não Japão)"
         echo "   'Onde foi a Copa de 2014?' → Brasil (sede)"
@@ -287,24 +314,33 @@ case "$1" in
     *)
         echo "Uso: $0 [opção]"
         echo ""
+        echo "⚠️  IMPORTANTE: Execute ./setup.sh primeiro para criar o índice FAISS!"
+        echo ""
         echo "Opções:"
-        echo "  backend   - Iniciar apenas o backend ultra-restritivo"
+        echo "  backend   - Iniciar apenas o backend ultra-avançado"
         echo "  frontend  - Iniciar apenas o frontend"
-        echo "  both      - Iniciar ambos ultra-otimizados (padrão)"
+        echo "  both      - Iniciar ambos ultra-avançados (padrão)"
         echo "  test      - Executar testes de performance"
-        echo "  optimize  - Recriar índice FAISS ultra-restritivo"
+        echo "  optimize  - Recriar índice FAISS (use ./setup.sh em vez disso)"
+        echo ""
+        echo "Fluxo recomendado:"
+        echo "  1. ./setup.sh           # Setup inicial (apenas uma vez)"
+        echo "  2. ./start.sh           # Iniciar sistema (rápido!)"
         echo ""
         echo "Exemplos:"
-        echo "  ./start.sh              # Inicia sistema completo"
-        echo "  ./start.sh backend      # Só backend ultra-restritivo"
-        echo "  ./start.sh optimize     # Recria índice ultra-restritivo"
+        echo "  ./start.sh              # Inicia sistema completo (rápido)"
+        echo "  ./start.sh backend      # Só backend ultra-avançado"
         echo "  ./start.sh test         # Testa performance"
         echo ""
-        echo "🧠 Sistema ultra-restritivo configurado para:"
-        echo "  • Evitar confusão entre sede e campeão"
-        echo "  • Respostas factuais sem alucinações"
-        echo "  • Modelo qwen2.5:3b otimizado para português"
-        echo "  • Fallback llama3.2 se necessário"
+        echo "🧠 Sistema ultra-avançado (após setup) com:"
+        echo "  • Chunking multi-nível (300/800/1500 caracteres)"
+        echo "  • Embedding multilíngue otimizado para português"
+        echo "  • Retriever MMR para máxima precisão e diversidade"
+        echo "  • Processamento em lotes para eficiência"
+        echo "  • Normalização de embeddings para melhor similaridade"
+        echo "  • Fallback automático de modelos"
+        echo "  • Anti-alucinação máximo"
+        echo "  • Índice FAISS pré-criado para inicialização ultra-rápida"
         exit 1
         ;;
 esac
