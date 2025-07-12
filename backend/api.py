@@ -585,14 +585,71 @@ def process_csv_data():
                                 }
                             ))
                     
-                    # Documento para vice-campeão
+                    # Documento para vice-campeão (ULTRA-EXPANDIDO)
                     if runner_up:
                         runner_up_variations = [
+                            # Variações básicas
                             f"Copa do Mundo de {year}: Vice-campeão foi {runner_up}",
                             f"Vice-campeão da Copa do Mundo {year}: {runner_up}",
                             f"Segundo lugar Copa {year}: {runner_up}",
                             f"Final Copa {year}: {champion} venceu {runner_up}",
-                            f"Finalista derrotado em {year}: {runner_up}"
+                            f"Finalista derrotado em {year}: {runner_up}",
+                            
+                            # Perguntas diretas
+                            f"Quem foi vice-campeão de {year}? {runner_up}",
+                            f"Quem foi vice-campeão da Copa de {year}? {runner_up}",
+                            f"Quem foi vice-campeão da Copa do Mundo de {year}? {runner_up}",
+                            f"Quem foi o vice em {year}? {runner_up}",
+                            f"Quem foi o vice da Copa de {year}? {runner_up}",
+                            f"Quem foi vice da Copa do Mundo de {year}? {runner_up}",
+                            f"Quem ficou em segundo lugar em {year}? {runner_up}",
+                            f"Quem perdeu a final de {year}? {runner_up}",
+                            f"Quem foi derrotado na final de {year}? {runner_up}",
+                            f"Quem chegou à final em {year}? {runner_up}",
+                            f"Quem foi finalista em {year}? {runner_up}",
+                            f"Quem foi o finalista de {year}? {runner_up}",
+                            f"Quem foi finalista da Copa de {year}? {runner_up}",
+                            f"Quem foi finalista da Copa do Mundo de {year}? {runner_up}",
+                            f"Quem disputou a final de {year}? {champion} e {runner_up}",
+                            
+                            # Variações "vice" abreviado
+                            f"Vice {year}: {runner_up}",
+                            f"Vice de {year}: {runner_up}",
+                            f"Vice da Copa {year}: {runner_up}",
+                            f"Vice Copa {year}: {runner_up}",
+                            f"Vice-campeão {year}: {runner_up}",
+                            f"Vice campeão {year}: {runner_up}",
+                            f"Vice mundial {year}: {runner_up}",
+                            f"Vice do Mundial {year}: {runner_up}",
+                            
+                            # Formas mais elaboradas
+                            f"{runner_up} foi vice-campeão mundial em {year}",
+                            f"{runner_up} foi vice-campeão da Copa do Mundo de {year}",
+                            f"{runner_up} foi vice-campeão em {year}",
+                            f"{runner_up} ficou em segundo lugar em {year}",
+                            f"{runner_up} perdeu a final de {year}",
+                            f"{runner_up} chegou à final em {year}",
+                            f"{runner_up} foi finalista em {year}",
+                            f"{runner_up} disputou a final contra {champion} em {year}",
+                            f"{runner_up} foi derrotado por {champion} na final de {year}",
+                            
+                            # Com contexto de sede
+                            f"Na Copa de {year} em {host}, {runner_up} foi vice-campeão",
+                            f"Em {year} ({host}), {runner_up} foi vice-campeão",
+                            f"Copa {year} no {host}: {runner_up} foi vice",
+                            f"Mundial {year} em {host}: vice foi {runner_up}",
+                            
+                            # Variações em inglês para busca internacional
+                            f"Runner-up {year}: {runner_up}",
+                            f"Second place {year}: {runner_up}",
+                            f"Finalist {year}: {runner_up}",
+                            
+                            # Contexto da final
+                            f"A final de {year} foi {champion} vs {runner_up}, venceu {champion}",
+                            f"Final da Copa {year}: {champion} derrotou {runner_up}",
+                            f"Resultado final {year}: {champion} campeão, {runner_up} vice",
+                            f"Decisão {year}: {champion} venceu {runner_up}",
+                            f"Copa {year} - Final: {champion} x {runner_up}, campeão {champion}",
                         ]
                         
                         for variation in runner_up_variations:
@@ -602,13 +659,16 @@ def process_csv_data():
                                     "type": "runner_up",
                                     "year": year,
                                     "runner_up": runner_up,
+                                    "champion": champion,
+                                    "host": host,
                                     "source": "world_cup.csv"
                                 }
                             ))
                     
-                    # Documento para sede (MUITO IMPORTANTE - distinguir de campeão)
+                    # Documento para sede (ULTRA-EXPANDIDO - CRÍTICO para distinguir de campeão)
                     if host:
                         host_variations = [
+                            # Variações básicas de sede
                             f"Copa do Mundo de {year}: Sede foi {host}",
                             f"Sede da Copa do Mundo {year}: {host}",
                             f"Onde foi a Copa do Mundo de {year}? {host}",
@@ -616,7 +676,92 @@ def process_csv_data():
                             f"{host} sediou a Copa do Mundo em {year}",
                             f"Local Copa {year}: {host}",
                             f"Organização Copa {year}: {host}",
-                            f"ATENÇÃO: {host} foi SEDE em {year}, mas campeão foi {champion}"
+                            
+                            # Perguntas diretas sobre sede
+                            f"Onde foi a Copa de {year}? {host}",
+                            f"Onde foi a Copa do Mundo de {year}? {host}",
+                            f"Onde aconteceu a Copa de {year}? {host}",
+                            f"Onde aconteceu a Copa do Mundo de {year}? {host}",
+                            f"Onde foi realizada a Copa de {year}? {host}",
+                            f"Onde foi realizada a Copa do Mundo de {year}? {host}",
+                            f"Onde ocorreu a Copa de {year}? {host}",
+                            f"Onde ocorreu a Copa do Mundo de {year}? {host}",
+                            f"Em que país foi a Copa de {year}? {host}",
+                            f"Em que país foi a Copa do Mundo de {year}? {host}",
+                            f"Qual foi a sede da Copa de {year}? {host}",
+                            f"Qual foi a sede da Copa do Mundo de {year}? {host}",
+                            f"Qual país sediou a Copa de {year}? {host}",
+                            f"Qual país sediou a Copa do Mundo de {year}? {host}",
+                            f"Quem sediou a Copa de {year}? {host}",
+                            f"Quem sediou a Copa do Mundo de {year}? {host}",
+                            f"Quem foi anfitrião da Copa de {year}? {host}",
+                            f"Quem foi anfitrião da Copa do Mundo de {year}? {host}",
+                            f"Quem organizou a Copa de {year}? {host}",
+                            f"Quem organizou a Copa do Mundo de {year}? {host}",
+                            f"Quem foi o organizador da Copa de {year}? {host}",
+                            f"Qual foi o país-sede de {year}? {host}",
+                            f"Qual foi o país anfitrião de {year}? {host}",
+                            
+                            # Variações "sede" abreviadas
+                            f"Sede {year}: {host}",
+                            f"Sede de {year}: {host}",
+                            f"Sede da Copa {year}: {host}",
+                            f"Sede Copa {year}: {host}",
+                            f"Local {year}: {host}",
+                            f"Local da Copa {year}: {host}",
+                            f"País-sede {year}: {host}",
+                            f"Anfitrião {year}: {host}",
+                            f"País anfitrião {year}: {host}",
+                            f"Organizador {year}: {host}",
+                            
+                            # Formas mais elaboradas
+                            f"{host} foi sede da Copa do Mundo de {year}",
+                            f"{host} foi sede em {year}",
+                            f"{host} foi o país-sede em {year}",
+                            f"{host} foi anfitrião da Copa de {year}",
+                            f"{host} foi anfitrião em {year}",
+                            f"{host} organizou a Copa de {year}",
+                            f"{host} organizou a Copa do Mundo de {year}",
+                            f"{host} recebeu a Copa de {year}",
+                            f"{host} recebeu a Copa do Mundo de {year}",
+                            f"{host} hospedou a Copa de {year}",
+                            f"{host} hospedou a Copa do Mundo de {year}",
+                            f"A Copa de {year} foi realizada em {host}",
+                            f"A Copa do Mundo de {year} foi realizada em {host}",
+                            f"A Copa de {year} aconteceu em {host}",
+                            f"A Copa do Mundo de {year} aconteceu em {host}",
+                            f"O Mundial de {year} foi em {host}",
+                            f"O Mundial de {year} aconteceu em {host}",
+                            
+                            # DISTINÇÃO CRÍTICA - Sede vs Campeão
+                            f"ATENÇÃO: {host} foi SEDE em {year}, mas campeão foi {champion}",
+                            f"IMPORTANTE: {host} foi o local, {champion} foi o campeão em {year}",
+                            f"DIFERENÇA: {host} = sede (local), {champion} = campeão (vencedor) em {year}",
+                            f"NÃO CONFUNDIR: {host} sediou, {champion} ganhou em {year}",
+                            f"CUIDADO: {host} foi anfitrião, {champion} foi vencedor em {year}",
+                            f"Copa {year}: sede em {host}, campeão {champion}",
+                            f"Em {year}: local {host}, vencedor {champion}",
+                            f"Mundial {year}: organizado por {host}, ganho por {champion}",
+                            f"A Copa de {year} foi EM {host}, mas GANHOU {champion}",
+                            f"Realizada em {host}, vencida por {champion} em {year}",
+                            
+                            # Variações em inglês
+                            f"Host {year}: {host}",
+                            f"Host country {year}: {host}",
+                            f"Where was {year} World Cup? {host}",
+                            f"Location {year}: {host}",
+                            
+                            # Com contexto do campeão e vice
+                            f"Copa {year} sediada por {host}: {champion} venceu {runner_up}",
+                            f"Em {host} ({year}): {champion} foi campeão, {runner_up} vice",
+                            f"Mundial {year} no {host}: campeão {champion}, vice {runner_up}",
+                            f"Sede {host} em {year}: final {champion} x {runner_up}",
+                            
+                            # Variações específicas por continente/região
+                            f"Copa {year} na {host} (sede)",
+                            f"Copa {year} no {host} (local do torneio)",
+                            f"Mundial {year} em território {host}",
+                            f"Torneio {year} realizado em {host}",
                         ]
                         
                         for variation in host_variations:
@@ -627,6 +772,7 @@ def process_csv_data():
                                     "year": year,
                                     "host": host,
                                     "champion": champion,
+                                    "runner_up": runner_up,
                                     "source": "world_cup.csv"
                                 }
                             ))
@@ -668,13 +814,100 @@ def process_csv_data():
                                 top_scorer_name = top_scorer.index[0]
                                 goals = top_scorer.iloc[0]
                                 
-                                # Criar documentos para artilheiro
+                                # Criar documentos para artilheiro (ULTRA-EXPANDIDO)
                                 scorer_variations = [
+                                    # Variações básicas
                                     f"Artilheiro da Copa do Mundo de {year}: {top_scorer_name} com {goals} gols",
                                     f"Maior artilheiro Copa {year}: {top_scorer_name} ({goals} gols)",
                                     f"Quem foi o artilheiro da Copa de {year}? {top_scorer_name}",
                                     f"Copa {year} - Artilheiro: {top_scorer_name} ({goals} gols)",
-                                    f"{top_scorer_name} foi artilheiro em {year} com {goals} gols"
+                                    f"{top_scorer_name} foi artilheiro em {year} com {goals} gols",
+                                    
+                                    # Perguntas diretas sobre artilheiro
+                                    f"Quem foi artilheiro de {year}? {top_scorer_name}",
+                                    f"Quem foi artilheiro da Copa de {year}? {top_scorer_name}",
+                                    f"Quem foi artilheiro da Copa do Mundo de {year}? {top_scorer_name}",
+                                    f"Quem foi o artilheiro de {year}? {top_scorer_name}",
+                                    f"Quem foi o artilheiro da Copa de {year}? {top_scorer_name}",
+                                    f"Quem foi o artilheiro da Copa do Mundo de {year}? {top_scorer_name}",
+                                    f"Quem foi o goleador de {year}? {top_scorer_name}",
+                                    f"Quem foi o goleador da Copa de {year}? {top_scorer_name}",
+                                    f"Quem foi o goleador da Copa do Mundo de {year}? {top_scorer_name}",
+                                    f"Quem foi o maior goleador de {year}? {top_scorer_name}",
+                                    f"Quem foi o maior goleador da Copa de {year}? {top_scorer_name}",
+                                    f"Quem foi o maior artilheiro de {year}? {top_scorer_name}",
+                                    f"Quem foi o maior artilheiro da Copa de {year}? {top_scorer_name}",
+                                    f"Quem marcou mais gols em {year}? {top_scorer_name}",
+                                    f"Quem marcou mais gols na Copa de {year}? {top_scorer_name}",
+                                    f"Quem fez mais gols em {year}? {top_scorer_name}",
+                                    f"Quem fez mais gols na Copa de {year}? {top_scorer_name}",
+                                    f"Quem foi o cestinha de {year}? {top_scorer_name}",
+                                    f"Quem foi o cestinha da Copa de {year}? {top_scorer_name}",
+                                    
+                                    # Variações "artilheiro" abreviadas
+                                    f"Artilheiro {year}: {top_scorer_name}",
+                                    f"Artilheiro de {year}: {top_scorer_name}",
+                                    f"Artilheiro da Copa {year}: {top_scorer_name}",
+                                    f"Goleador {year}: {top_scorer_name}",
+                                    f"Goleador de {year}: {top_scorer_name}",
+                                    f"Goleador da Copa {year}: {top_scorer_name}",
+                                    f"Maior artilheiro {year}: {top_scorer_name}",
+                                    f"Maior goleador {year}: {top_scorer_name}",
+                                    f"Top scorer {year}: {top_scorer_name}",
+                                    
+                                    # Formas mais elaboradas
+                                    f"{top_scorer_name} foi artilheiro da Copa do Mundo de {year}",
+                                    f"{top_scorer_name} foi artilheiro em {year}",
+                                    f"{top_scorer_name} foi o artilheiro em {year}",
+                                    f"{top_scorer_name} foi goleador da Copa de {year}",
+                                    f"{top_scorer_name} foi goleador em {year}",
+                                    f"{top_scorer_name} foi o goleador em {year}",
+                                    f"{top_scorer_name} foi o maior artilheiro de {year}",
+                                    f"{top_scorer_name} foi o maior goleador de {year}",
+                                    f"{top_scorer_name} marcou mais gols em {year}",
+                                    f"{top_scorer_name} fez mais gols na Copa de {year}",
+                                    f"{top_scorer_name} liderou os gols em {year}",
+                                    f"{top_scorer_name} foi o cestinha de {year}",
+                                    f"{top_scorer_name} terminou artilheiro em {year}",
+                                    f"{top_scorer_name} ficou como artilheiro em {year}",
+                                    f"{top_scorer_name} conquistou a artilharia em {year}",
+                                    f"{top_scorer_name} ganhou a artilharia em {year}",
+                                    
+                                    # Com número de gols específico
+                                    f"{top_scorer_name} marcou {goals} gols em {year}",
+                                    f"{top_scorer_name} fez {goals} gols na Copa de {year}",
+                                    f"{top_scorer_name} balançou as redes {goals} vezes em {year}",
+                                    f"Com {goals} gols, {top_scorer_name} foi artilheiro em {year}",
+                                    f"Foram {goals} gols de {top_scorer_name} em {year}",
+                                    f"Total de {goals} gols para {top_scorer_name} em {year}",
+                                    f"{top_scorer_name}: {goals} gols na Copa {year}",
+                                    f"Placar final da artilharia {year}: {top_scorer_name} com {goals} gols",
+                                    
+                                    # Variações com contexto da sede
+                                    f"Na Copa de {year}, {top_scorer_name} foi artilheiro com {goals} gols",
+                                    f"Em {year}, {top_scorer_name} foi o maior goleador com {goals} gols",
+                                    f"Copa {year}: artilheiro {top_scorer_name} ({goals} gols)",
+                                    f"Mundial {year}: goleador {top_scorer_name} com {goals} gols",
+                                    
+                                    # Variações em inglês
+                                    f"Top scorer {year}: {top_scorer_name} ({goals} goals)",
+                                    f"Leading scorer {year}: {top_scorer_name}",
+                                    f"Golden Boot {year}: {top_scorer_name}",
+                                    f"Most goals {year}: {top_scorer_name} with {goals}",
+                                    
+                                    # Contexto de premiação
+                                    f"{top_scorer_name} ganhou a Chuteira de Ouro em {year}",
+                                    f"{top_scorer_name} conquistou a Chuteira de Ouro de {year}",
+                                    f"Chuteira de Ouro {year}: {top_scorer_name}",
+                                    f"Golden Boot {year}: {top_scorer_name}",
+                                    f"Prêmio de artilheiro {year}: {top_scorer_name}",
+                                    f"Artilharia da Copa {year}: {top_scorer_name} com {goals} gols",
+                                    
+                                    # Contexto comparativo
+                                    f"{top_scorer_name} liderou a artilharia com {goals} gols em {year}",
+                                    f"O maior pontuador de {year} foi {top_scorer_name}",
+                                    f"Ninguém marcou mais que {top_scorer_name} em {year}",
+                                    f"{top_scorer_name} superou todos na artilharia de {year}",
                                 ]
                                 
                                 for variation in scorer_variations:
