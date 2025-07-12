@@ -1,6 +1,5 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from langchain.text_splitter import CharacterTextSplitter
 from langchain_community.embeddings import HuggingFaceEmbeddings
@@ -11,8 +10,8 @@ from langchain_community.llms import Ollama
 from langchain_core.documents import Document
 import uvicorn
 import os
-import json
-import asyncio
+import pandas as pd
+import glob
 
 class QuestionRequest(BaseModel):
     message: str
@@ -27,10 +26,11 @@ class HealthResponse(BaseModel):
     message: str
 
 app = FastAPI(
-    title="Chat Sport RAG API",
-    description="API para sistema de chat esportivo com RAG",
-    version="1.0.0"
+    title="World Cup RAG API",
+    description="API para chatbot sobre Copa do Mundo FIFA com RAG",
+    version="2.0.0"
 )
+
 
 app.add_middleware(
     CORSMiddleware,
@@ -43,134 +43,449 @@ app.add_middleware(
 qa_system = None
 embeddings = None
 response_cache = {}
+current_model = None  # Variável global para rastrear o modelo em uso
 
-QUICK_ANSWERS = {
-    "oi": "Olá! Como posso ajudar com suas perguntas sobre futebol?",
-    "olá": "Olá! Como posso ajudar com suas perguntas sobre futebol?",
-    "ola": "Olá! Como posso ajudar com suas perguntas sobre futebol?",
-    "hello": "Olá! Como posso ajudar com suas perguntas sobre futebol?",
-    "quantas copas o brasil tem": "O Brasil tem 5 títulos de Copa do Mundo: 1958, 1962, 1970, 1994, 2002.",
-    "quantas copas brasil tem": "O Brasil tem 5 títulos de Copa do Mundo: 1958, 1962, 1970, 1994, 2002.",
-    "copa do mundo de clubes": "A Copa do Mundo de Clubes da FIFA é disputada anualmente entre os campeões continentais. O formato expandido com 32 times começará em 2025.",
-    "mundial de clubes": "A Copa do Mundo de Clubes da FIFA é disputada anualmente entre os campeões continentais. O formato expandido com 32 times começará em 2025.",
-    "quando é a próxima copa": "A próxima Copa do Mundo FIFA será em 2026, realizada conjuntamente por EUA, Canadá e México.",
-    "copa 2026": "A Copa do Mundo de 2026 será realizada nos EUA, Canadá e México, com 48 seleções participantes.",
-    "real madrid campeão": "O Real Madrid conquistou a Champions League 2023-24, sendo o clube com mais títulos da competição (15 títulos).",
-    "champions league": "A Champions League é a principal competição de clubes da Europa. O Real Madrid é o maior campeão com 15 títulos.",
-    "libertadores": "A Copa Libertadores é a principal competição de clubes da América do Sul, equivalente à Champions League europeia.",
-    "brasileirão": "O Campeonato Brasileiro (Brasileirão) é a principal competição nacional do Brasil, disputada por 20 clubes.",
-    "messi barcelona": "Lionel Messi deixou o Barcelona em 2021 e atualmente joga pelo Inter Miami na MLS americana.",
-    "neymar psg": "Neymar deixou o PSG em 2023 e se transferiu para o Al-Hilal da Arábia Saudita.",
-    "mbappé real madrid": "Kylian Mbappé se transferiu para o Real Madrid em 2024, após deixar o PSG."
+WORLD_CUP_QUICK_ANSWERS = {
+    "oi": "Olá! Sou seu assistente especializado em Copa do Mundo FIFA. Como posso ajudar?",
+    "olá": "Olá! Sou seu assistente especializado em Copa do Mundo FIFA. Como posso ajudar?",
+    "hello": "Hello! I'm your FIFA World Cup specialist assistant. How can I help?",
+    
+    # Títulos por país
+    "quantas copas o brasil tem": "O Brasil conquistou 5 Copas do Mundo: 1958 (Suécia), 1962 (Chile), 1970 (México), 1994 (EUA), 2002 (Japão/Coreia do Sul).",
+    "brasil copas": "O Brasil conquistou 5 Copas do Mundo: 1958 (Suécia), 1962 (Chile), 1970 (México), 1994 (EUA), 2002 (Japão/Coreia do Sul).",
+    "quantas copas a alemanha tem": "A Alemanha tem 4 títulos de Copa do Mundo: 1954, 1974, 1990 e 2014.",
+    "quantas copas a argentina tem": "A Argentina tem 3 títulos de Copa do Mundo: 1978, 1986 e 2022.",
+    "quantas copas a frança tem": "A França tem 2 títulos de Copa do Mundo: 1998 e 2018.",
+    "quantas copas a italia tem": "A Itália tem 4 títulos de Copa do Mundo: 1934, 1938, 1982 e 2006.",
+    
+    # Campeões por ano - múltiplas variações
+    "campeão 2022": "Argentina foi campeã da Copa do Mundo de 2022 no Qatar, vencendo a França na final por 4-3 nos pênaltis (3-3 no tempo normal).",
+    "quem ganhou em 2022": "Argentina foi campeã da Copa do Mundo de 2022 no Qatar.",
+    "campeão 2018": "França foi campeã da Copa do Mundo de 2018 na Rússia, vencendo a Croácia por 4-2 na final.",
+    "campeão 2014": "Alemanha foi campeã da Copa do Mundo de 2014 no Brasil, vencendo a Argentina por 1-0 na final.",
+    "campeão 2010": "Espanha foi campeã da Copa do Mundo de 2010 na África do Sul, vencendo a Holanda por 1-0 na final.",
+    "campeão 2006": "Itália foi campeã da Copa do Mundo de 2006 na Alemanha, vencendo a França nos pênaltis na final.",
+    "campeão 2002": "Brasil foi campeão da Copa do Mundo de 2002 no Japão/Coreia do Sul, vencendo a Alemanha por 2-0 na final.",
+    "campeão 1998": "França foi campeã da Copa do Mundo de 1998 em casa, vencendo o Brasil por 3-0 na final.",
+  "campeão 1994": "Brasil foi campeão da Copa do Mundo de 1994 nos EUA, vencendo a Itália nos pênaltis na final.",
+    
+    # Artilheiros
+    "artilheiro 2022": "Kylian Mbappé foi o artilheiro da Copa de 2022 com 8 gols.",
+    "artilheiro 2018": "Harry Kane foi o artilheiro da Copa de 2018 com 6 gols.",
+    "artilheiro 1998": "Davor Šuker foi o artilheiro da Copa de 1998 com 6 gols.",
+    
+    # Próxima Copa
+    "próxima copa": "A próxima Copa do Mundo será em 2026, realizada conjuntamente pelos EUA, Canadá e México, com 48 seleções.",
+    "copa 2026": "A Copa do Mundo de 2026 será nos EUA, Canadá e México, com formato expandido para 48 seleções.",
 }
 
+def load_csv_files(directory_path):
+    """Carregar dados CSV de forma ultra-simples para evitar alucinações."""
+    documents = []
+    csv_files = glob.glob(os.path.join(directory_path, "*.csv"))
+    
+    for csv_file in csv_files:
+        try:
+            df = pd.read_csv(csv_file, encoding='utf-8')
+            file_name = os.path.basename(csv_file)
+            
+            if 'world_cup' in file_name.lower():
+                # Documento individual para cada Copa do Mundo para máxima precisão
+                for _, row in df.iterrows():
+                    year = row.get('Year', '')
+                    host = row.get('Host', '')
+                    champion = row.get('Champion', '')
+                    runner_up = row.get('Runner-Up', '')
+                    top_scorer = row.get('TopScorrer', '')
+                    teams = row.get('Teams', '')
+                    
+                    # Criar múltiplos formatos MUITO CLAROS para evitar confusão entre sede e campeão
+                    individual_content = f"""===== COPA DO MUNDO FIFA DE {year} =====
+
+DADOS OFICIAIS:
+ANO: {year}
+PAÍS-SEDE: {host} (LOCAL onde foi realizada a Copa)
+CAMPEÃO MUNDIAL: {champion} (PAÍS que GANHOU o título)
+VICE-CAMPEÃO: {runner_up} (PAÍS que chegou à final)
+ARTILHEIRO: {top_scorer} (Maior goleador do torneio)
+PARTICIPANTES: {teams} seleções
+
+ATENÇÃO: {host} = SEDE (onde aconteceu) ≠ {champion} = CAMPEÃO (quem ganhou)
+
+RESPOSTAS CORRETAS:
+• Quem foi campeão em {year}? RESPOSTA: {champion}
+• Campeão de {year}: {champion}
+• Quem ganhou a Copa de {year}? RESPOSTA: {champion}
+• Quem venceu em {year}? RESPOSTA: {champion}
+• Título de {year}: {champion}
+• Copa {year} campeão: {champion}
+
+• Onde foi a Copa de {year}? RESPOSTA: {host}
+• Sede de {year}: {host}
+• Local da Copa {year}: {host}
+
+• Vice-campeão de {year}: {runner_up}
+• Finalista de {year}: {runner_up}
+
+• Artilheiro de {year}: {top_scorer}
+• Goleador de {year}: {top_scorer}
+
+IMPORTANTE: O campeão da Copa de {year} foi {champion}, NÃO {host}.
+A Copa foi realizada em {host}, mas quem ganhou foi {champion}.
+"""
+                    
+                    documents.append(Document(
+                        page_content=individual_content,
+                        metadata={
+                            "source": csv_file,
+                            "file_name": file_name,
+                            "year": year,
+                            "champion": champion,
+                            "data_category": "individual_world_cup",
+                            "decade": f"{(year//10)*10}s"
+                        }
+                    ))
+                
+                # Documento focado em campeões com variações em português
+                champions_content = "=== CAMPEÕES DA COPA DO MUNDO FIFA - LISTA DEFINITIVA ===\n\n"
+                champions_content += "ATENÇÃO: CAMPEÃO = quem ganhou o título, SEDE = onde aconteceu\n\n"
+                
+                for _, row in df.iterrows():
+                    year = row.get('Year', '')
+                    champion = row.get('Champion', '')
+                    host = row.get('Host', '')
+                    
+                    champions_content += f"COPA DE {year}:\n"
+                    champions_content += f"CAMPEÃO (vencedor): {champion}\n"
+                    champions_content += f"SEDE (local): {host}\n"
+                    champions_content += f"RESULTADO: {champion} conquistou o título em {year}\n"
+                    champions_content += f"ONDE: A Copa foi em {host}, mas o CAMPEÃO foi {champion}\n\n"
+                    
+                    # Múltiplas variações para o RAG encontrar
+                    champions_content += f"Quem foi campeão de {year}? {champion}\n"
+                    champions_content += f"Campeão {year}: {champion}\n"  
+                    champions_content += f"Quem ganhou em {year}? {champion}\n"
+                    champions_content += f"Título {year}: {champion}\n"
+                    champions_content += f"Vencedor {year}: {champion}\n"
+                    champions_content += f"Copa {year} - Campeão: {champion}\n"
+                    champions_content += f"{champion} foi campeão da Copa de {year}\n"
+                    champions_content += f"{champion} ganhou a Copa do Mundo de {year}\n\n"
+                    
+                champions_content += "\n=== RESUMO RÁPIDO ===\n"
+                for _, row in df.iterrows():
+                    year = row.get('Year', '')
+                    champion = row.get('Champion', '')
+                    champions_content += f"{year}: {champion}\n"
+                
+                documents.append(Document(
+                    page_content=champions_content,
+                    metadata={
+                        "source": csv_file,
+                        "file_name": file_name,
+                        "data_category": "champions_comprehensive",
+                        "rows": len(df)
+                    }
+                ))
+                
+                # Documento focado em vice-campeões com variações em português
+                runners_up_content = "=== VICE-CAMPEÕES DA COPA DO MUNDO FIFA ===\n\n"
+                runners_up_content += "Lista completa de todos os vice-campeões da Copa do Mundo:\n\n"
+                
+                for _, row in df.iterrows():
+                    year = row.get('Year', '')
+                    runner_up = row.get('Runner-Up', '')
+                    host = row.get('Host', '')
+                    
+                    runners_up_content += f"Copa de {year}: {runner_up} foi vice-campeão (sede: {host})\n"
+                    runners_up_content += f"Vice-campeão {year}: {runner_up}\n"
+                    runners_up_content += f"Vice {year}: {runner_up}\n"
+                    runners_up_content += f"Finalista {year}: {runner_up}\n"
+                    runners_up_content += f"Segundo lugar {year}: {runner_up}\n"
+                    runners_up_content += f"{runner_up} foi vice-campeão em {year}\n"
+                    runners_up_content += f"{runner_up} foi finalista em {year}\n"
+                    runners_up_content += f"{runner_up} chegou à final em {year}\n"
+                    runners_up_content += f"Quem foi vice-campeão de {year}? {runner_up}\n"
+                    runners_up_content += f"Quem foi vice de {year}? {runner_up}\n\n"
+                
+                documents.append(Document(
+                    page_content=runners_up_content,
+                    metadata={
+                        "source": csv_file,
+                        "file_name": file_name,
+                        "data_category": "runners_up_comprehensive",
+                        "rows": len(df)
+                    }
+                ))
+                
+                # Documento focado em artilheiros com variações em português
+                scorers_content = "=== ARTILHEIROS DA COPA DO MUNDO FIFA ===\n\n"
+                scorers_content += "Lista completa de todos os artilheiros da Copa do Mundo:\n\n"
+                
+                for _, row in df.iterrows():
+                    year = row.get('Year', '')
+                    top_scorer = row.get('TopScorrer', '')  # Note: TopScorrer no CSV original
+                    host = row.get('Host', '')
+                    
+                    scorers_content += f"Copa de {year}: {top_scorer} foi artilheiro (sede: {host})\n"
+                    scorers_content += f"Artilheiro {year}: {top_scorer}\n"
+                    scorers_content += f"Goleador {year}: {top_scorer}\n"
+                    scorers_content += f"Maior artilheiro {year}: {top_scorer}\n"
+                    scorers_content += f"Maior goleador {year}: {top_scorer}\n"
+                    scorers_content += f"{top_scorer} foi artilheiro em {year}\n"
+                    scorers_content += f"{top_scorer} foi o maior goleador em {year}\n"
+                    scorers_content += f"{top_scorer} foi o goleador da Copa de {year}\n"
+                    scorers_content += f"Quem foi artilheiro de {year}? {top_scorer}\n"
+                    scorers_content += f"Quem foi o goleador de {year}? {top_scorer}\n\n"
+                
+                documents.append(Document(
+                    page_content=scorers_content,
+                    metadata={
+                        "source": csv_file,
+                        "file_name": file_name,
+                        "data_category": "scorers_comprehensive",
+                        "rows": len(df)
+                    }
+                ))
+                    
+            elif 'fifa_ranking' in file_name.lower():
+                # Melhorar estrutura do ranking
+                content_parts = []
+                content_parts.append(f"=== RANKING MUNDIAL FIFA (OUTUBRO 2022) ===\n\n")
+                
+                # Dividir em grupos para melhor recuperação
+                top_10 = df.head(10)
+                content_parts.append("TOP 10 MUNDIAL:\n")
+                for _, row in top_10.iterrows():
+                    team = row.get('team', '')
+                    rank = row.get('rank', '')
+                    points = row.get('points', '')
+                    content_parts.append(f"{rank}º - {team}: {points} pontos\n")
+                
+                content_parts.append("\nTOP 11-20:\n")
+                next_10 = df.iloc[10:20]
+                for _, row in next_10.iterrows():
+                    team = row.get('team', '')
+                    rank = row.get('rank', '')
+                    points = row.get('points', '')
+                    content_parts.append(f"{rank}º - {team}: {points} pontos\n")
+                
+                content = "".join(content_parts)
+                
+                documents.append(Document(
+                    page_content=content,
+                    metadata={
+                        "source": csv_file,
+                        "file_name": file_name,
+                        "data_category": "fifa_ranking",
+                        "date": "2022-10",
+                        "rows": len(df)
+                    }
+                ))
+                    
+            elif 'matches' in file_name.lower():
+                # Focar apenas nas finais para evitar confusão
+                content_parts = []
+                content_parts.append(f"=== FINAIS DA COPA DO MUNDO (1930-2022) ===\n\n")
+                
+                # Filtrar apenas finais
+                finals = df[df['Round'].str.contains('Final', na=False, case=False)]
+                finals_only = finals[~finals['Round'].str.contains('Semi|Third', na=False, case=False)]
+                
+                for _, match in finals_only.iterrows():
+                    year = match.get('Year', '')
+                    home = match.get('home_team', '')
+                    away = match.get('away_team', '')
+                    score = match.get('Score', '')
+                    venue = match.get('Venue', '')
+                    
+                    # Determinar campeão baseado no placar
+                    if 'Argentina' in home and 'France' in away and year == 2022:
+                        champion = "Argentina"
+                    elif 'France' in home and 'Croatia' in away and year == 2018:
+                        champion = "França"
+                    else:
+                        # Lógica para outros anos baseada no placar
+                        champion = "Ver dados históricos"
+                    
+                    entry = f"""Final da Copa {year}:
+{home} vs {away}
+Placar: {score}
+Local: {venue}
+Campeão: {champion}
+
+"""
+                    content_parts.append(entry)
+                
+                content = "".join(content_parts)
+                
+                documents.append(Document(
+                    page_content=content,
+                    metadata={
+                        "source": csv_file,
+                        "file_name": file_name,
+                        "data_category": "world_cup_finals",
+                        "rows": len(finals_only)
+                    }
+                ))
+                    
+            else:
+                # Outros CSVs
+                content = f"Dados de {file_name}:\n{df.head(5).to_string(index=False)}"
+                documents.append(Document(
+                    page_content=content,
+                    metadata={"source": csv_file, "file_name": file_name, "data_category": "other"}
+                ))
+            
+        except Exception as e:
+            print(f"Error loading {csv_file}: {str(e)}")
+            continue
+    
+    return documents
+
 def get_quick_answer(message):
+    """Quick answer matching only for exact greetings and simple queries."""
     message_lower = message.lower().strip()
     
-    # Cache MUITO restritivo - apenas saudações e pergunta exata sobre copas
-    if message_lower in QUICK_ANSWERS:
-        return QUICK_ANSWERS[message_lower]
+    # Remove pontuação e caracteres extras
+    import re
+    message_clean = re.sub(r'[^\w\s]', '', message_lower)
     
+    # Verificação exata primeiro - apenas para saudações e perguntas muito específicas
+    if message_lower in WORLD_CUP_QUICK_ANSWERS:
+        return WORLD_CUP_QUICK_ANSWERS[message_lower]
+    
+    if message_clean in WORLD_CUP_QUICK_ANSWERS:
+        return WORLD_CUP_QUICK_ANSWERS[message_clean]
+    
+    # Apenas para saudações simples
+    greetings = ["oi", "olá", "hello", "hi"]
+    if message_lower in greetings:
+        return WORLD_CUP_QUICK_ANSWERS.get(message_lower, None)
+    
+    # Para títulos por país - apenas matches exatos
+    country_titles = [
+        "quantas copas o brasil tem",
+        "brasil copas", 
+        "quantas copas a alemanha tem",
+        "quantas copas a argentina tem",
+        "quantas copas a frança tem",
+        "quantas copas a italia tem"
+    ]
+    
+    if message_lower in country_titles:
+        return WORLD_CUP_QUICK_ANSWERS.get(message_lower, None)
+    
+    # Para próxima Copa
+    next_cup = ["próxima copa", "copa 2026"]
+    if message_lower in next_cup:
+        return WORLD_CUP_QUICK_ANSWERS.get(message_lower, None)
+    
+    # Para todas as outras perguntas (campeões, artilheiros, etc), usar RAG
     return None
 
 def initialize_rag_system():
-    global qa_system, embeddings
-    
-    print("🚀 [DEBUG] Iniciando sistema RAG...")
+    global qa_system, embeddings, current_model
     
     try:
-        # Carrega o arquivo de dados
-        def load_text_file(path):
-            print(f"📁 [DEBUG] Tentando carregar arquivo: {path}")
-            if not os.path.exists(path):
-                raise FileNotFoundError(f"Arquivo {path} não encontrado")
-            with open(path, 'r', encoding='utf-8') as f:
-                text = f.read()
-            print(f"📄 [DEBUG] Arquivo carregado, tamanho: {len(text)} caracteres")
-            return [Document(page_content=text, metadata={"source": path})]
-
         faiss_index_path = "faiss_index_"
+        
         if os.path.exists(f"{faiss_index_path}/index.faiss"):
-            print("🔄 [DEBUG] Carregando índice FAISS existente...")
-            embedding_model_name = "sentence-transformers/all-MiniLM-L6-v2"
-            model_kwargs = {"device": "cpu"}
-            print(f"🧠 [DEBUG] Carregando embeddings: {embedding_model_name}")
-            embeddings = HuggingFaceEmbeddings(model_name=embedding_model_name, model_kwargs=model_kwargs)
-            print("📚 [DEBUG] Carregando vectorstore...")
-            persisted_vectorstore = FAISS.load_local(faiss_index_path, embeddings, allow_dangerous_deserialization=True)
-            print("✅ [DEBUG] Vectorstore carregado!")
+            embeddings = HuggingFaceEmbeddings(
+                model_name="sentence-transformers/all-MiniLM-L6-v2", 
+                model_kwargs={"device": "cpu"}
+            )
+            try:
+                vectorstore = FAISS.load_local(faiss_index_path, embeddings, allow_dangerous_deserialization=True)
+            except TypeError:
+                vectorstore = FAISS.load_local(faiss_index_path, embeddings)
         else:
-            print("🆕 [DEBUG] Criando novo índice FAISS...")
-            documents = load_text_file("data.txt")
+            documents = load_csv_files("wcdataset")
+            if not documents:
+                raise Exception("Nenhum arquivo CSV encontrado!")
             
-            print("✂️ [DEBUG] Dividindo texto em chunks...")
-            text_splitter = CharacterTextSplitter(chunk_size=200, chunk_overlap=15, separator="\n")
+            text_splitter = CharacterTextSplitter(
+                chunk_size=600,   # Reduzir ainda mais para focar em informações específicas
+                chunk_overlap=50,  # Overlap mínimo para evitar misturar informações
+                separator="====="   # Usar o separador das seções para preservar contexto
+            )
             docs = text_splitter.split_documents(documents)
-            print(f"📝 [DEBUG] Criados {len(docs)} chunks")
             
-            embedding_model_name = "sentence-transformers/all-MiniLM-L6-v2"
-            model_kwargs = {"device": "cpu"}
-            print(f"🧠 [DEBUG] Carregando embeddings: {embedding_model_name}")
-            embeddings = HuggingFaceEmbeddings(model_name=embedding_model_name, model_kwargs=model_kwargs)
+            embeddings = HuggingFaceEmbeddings(
+                model_name="sentence-transformers/all-MiniLM-L6-v2",
+                model_kwargs={"device": "cpu"}
+            )
             
-            print("🏗️ [DEBUG] Criando vectorstore...")
-            persisted_vectorstore = FAISS.from_documents(docs, embeddings)
-            print("💾 [DEBUG] Salvando vectorstore...")
-            persisted_vectorstore.save_local(faiss_index_path)
-            print("✅ [DEBUG] Vectorstore criado e salvo!")
+            vectorstore = FAISS.from_documents(docs, embeddings)
+            vectorstore.save_local(faiss_index_path)
         
-        print("🤖 [DEBUG] Inicializando modelo LLM...")
-        llm = Ollama(
-            model="tinyllama",
-            temperature=0.2,
-            top_p=0.8,
-            num_predict=300,
-            repeat_penalty=1.05,
-            stop=["Human:", "Assistant:", "\n\nHuman:", "\n\nAssistant:", "Pergunta:", "Resposta:"],
-            timeout=60
-        )
-        print("✅ [DEBUG] LLM inicializado com tokens aumentados e timeout de 60s!")
+        llm = None
+        model_used = None
         
-        print("🧪 [DEBUG] Testando conexão com Ollama...")
+        # Tentar qwen2.5:3b primeiro (melhor para português)
         try:
-            test_response = llm.invoke("Hello")
-            print(f"✅ [DEBUG] Teste do Ollama bem-sucedido: {test_response[:50]}...")
-        except Exception as ollama_error:
-            print(f"❌ [DEBUG] Erro no teste do Ollama: {ollama_error}")
-            raise ollama_error
+            llm = Ollama(
+                model="qwen2.5:3b",
+                temperature=0.0,
+                timeout=60
+            )
+            # Testar se o modelo funciona
+            llm.invoke("test")
+            model_used = "qwen2.5:3b"
+            current_model = "qwen2.5:3b"
+            print("✅ Usando modelo qwen2.5:3b (otimizado para português)")
+        except Exception as e:
+            print(f"⚠️ qwen2.5:3b não disponível: {e}")
+            
+            # Fallback para llama3.2
+            try:
+                llm = Ollama(
+                    model="llama3.2",
+                    temperature=0.0,
+                    timeout=60
+                )
+                # Testar se o modelo funciona
+                llm.invoke("test")
+                model_used = "llama3.2"
+                current_model = "llama3.2"
+                print("✅ Usando modelo llama3.2 como fallback")
+            except Exception as e2:
+                print(f"❌ Erro com ambos os modelos: qwen2.5:3b e llama3.2")
+                raise Exception(f"Nenhum modelo disponível: {e2}")
         
-        print("🔗 [DEBUG] Criando sistema de perguntas e respostas...")
-        retriever = persisted_vectorstore.as_retriever(search_kwargs={"k": 2})
+        if llm is None:
+            raise Exception("Falha ao inicializar qualquer modelo")
         
-        # Template personalizado em português - otimizado para respostas completas
-        template = """Com base nas informações sobre futebol, responda em português brasileiro de forma completa:
+        retriever = vectorstore.as_retriever(
+            search_type="similarity",
+            search_kwargs={
+                "k": 3,  # Mais documentos para encontrar informação
+                "score_threshold": 0.2  # Threshold baixo para capturar mais resultados
+            }
+        )
+        
+        template = """Use apenas os dados fornecidos para responder. Seja direto.
 
+DADOS:
 {context}
 
-Pergunta: {question}
-Resposta completa:"""
+PERGUNTA: {question}
+
+RESPOSTA:"""
         
-        prompt = PromptTemplate(
-            template=template,
-            input_variables=["context", "question"]
-        )
+        prompt = PromptTemplate(template=template, input_variables=["context", "question"])
         
         qa_system = RetrievalQA.from_chain_type(
-            llm=llm, 
-            chain_type="stuff", 
+            llm=llm,
+            chain_type="stuff",
             retriever=retriever,
             return_source_documents=False,
             chain_type_kwargs={"prompt": prompt}
         )
-        print("✅ [DEBUG] QA System criado com prompt em português!")
         
-        print("🎉 [DEBUG] Sistema RAG inicializado com sucesso!")
         return True
         
     except Exception as e:
-        print(f"❌ [DEBUG] Erro ao inicializar sistema RAG: {str(e)}")
-        import traceback
-        print(f"❌ [DEBUG] Traceback completo: {traceback.format_exc()}")
+        print(f"Erro ao inicializar RAG: {str(e)}")
         return False
 
 @app.on_event("startup")
@@ -193,122 +508,49 @@ async def health_check():
 
 @app.post("/chat", response_model=QuestionResponse)
 async def ask_question(request: QuestionRequest):
-    
-    print(f"🔥 [DEBUG] Recebida requisição: {request.message}")
-    
     if qa_system is None:
-        print("❌ [DEBUG] Sistema RAG não está inicializado!")
-        raise HTTPException(
-            status_code=500,
-            detail="Sistema RAG não inicializado. Verifique os logs do servidor."
-        )
-    
-    print("✅ [DEBUG] Sistema RAG está inicializado")
+        raise HTTPException(status_code=500, detail="Sistema RAG não inicializado")
     
     if not request.message.strip():
-        print("❌ [DEBUG] Mensagem está vazia")
-        raise HTTPException(
-            status_code=400,
-            detail="Pergunta não pode estar vazia"
-        )
-    
-    print(f"📝 [DEBUG] Processando pergunta: {request.message}")
+        raise HTTPException(status_code=400, detail="Pergunta não pode estar vazia")
     
     quick_answer = get_quick_answer(request.message)
     if quick_answer:
-        print("⚡ [DEBUG] Resposta rápida encontrada!")
         return QuestionResponse(
-            answer=f"⚡ **Resposta Rápida**: {quick_answer}",
+            answer=quick_answer,
             success=True,
-            message="Resposta rápida do cache"
-        )
-    
-    cache_key = request.message.lower().strip()
-    if cache_key in response_cache:
-        print("💾 [DEBUG] Resposta encontrada no cache!")
-        return QuestionResponse(
-            answer=f"💾 **Do Cache**: {response_cache[cache_key]}",
-            success=True,
-            message="Resposta do cache"
+            message="Resposta rápida"
         )
     
     try:
-        print("🔍 [DEBUG] Iniciando invoke do qa_system...")
-        
-        import asyncio
-        import time
-        from concurrent.futures import ThreadPoolExecutor, TimeoutError as FutureTimeoutError
-        
-        start_time = time.time()
-        print(f"⏰ [DEBUG] Tempo inicial: {start_time}")
-        
-        def run_qa_system():
-            return qa_system.invoke({"query": request.message})
-        
-        with ThreadPoolExecutor() as executor:
-            future = executor.submit(run_qa_system)
-            try:
-                response = future.result(timeout=120)
-            except FutureTimeoutError:
-                return QuestionResponse(
-                    answer="Sua pergunta está demorando para processar. O sistema pode estar sobrecarregado. Tente novamente em alguns instantes.",
-                    success=True,
-                    message="Timeout - sistema sobrecarregado (120s)"
-                )
-        
-        end_time = time.time()
-        duration = end_time - start_time
-        print(f"⏰ [DEBUG] Tempo final: {end_time}, duração: {duration:.2f}s")
-        print(f"✅ [DEBUG] Resposta recebida (tipo: {type(response)})")
-        print(f"📝 [DEBUG] Resposta completa: {response}")
+        response = qa_system.invoke({"query": request.message})
         
         if isinstance(response, dict) and "result" in response:
             answer = response["result"]
-        elif isinstance(response, str):
-            answer = response
         else:
-            print(f"⚠️ [DEBUG] Formato de resposta inesperado: {type(response)}")
             answer = str(response)
         
-        # Validação de resposta completa
-        if len(answer.strip()) < 20:
-            print(f"⚠️ [DEBUG] Resposta muito curta ({len(answer)} chars), pode estar incompleta")
-        
-        # Remove possíveis artifacts do template
-        answer = answer.replace("Responda de forma DIRETA e CONCISA em português brasileiro:", "").strip()
-        answer = answer.replace("Baseado nas informações sobre futebol abaixo:", "").strip()
-        
-        print(f"📤 [DEBUG] Enviando resposta limpa ({len(answer)} chars): {answer[:200]}...")
-        
-        # Salva resposta no cache automático para acelerar futuras consultas
-        cache_key = request.message.lower().strip()
-        if len(response_cache) < 50:
-            response_cache[cache_key] = answer
-            print("💾 [DEBUG] Resposta salva no cache!")
+        answer = answer.strip()
         
         return QuestionResponse(
-            answer=f"🤖 **RAG/LLM**: {answer}",
+            answer=answer,
             success=True,
-            message="Pergunta processada com RAG/LLM"
+            message="Resposta processada com RAG"
         )
         
     except Exception as e:
-        print(f"❌ [DEBUG] Erro ao processar pergunta: {str(e)}")
-        import traceback
-        print(f"❌ [DEBUG] Traceback completo: {traceback.format_exc()}")
-        raise HTTPException(
-            status_code=500,
-            detail=f"Erro interno: {str(e)}"
-        )
+        raise HTTPException(status_code=500, detail=f"Erro interno: {str(e)}")
 
 @app.get("/")
 async def root():
     return {
-        "message": "Chat Sport RAG API",
-        "version": "1.0.0",
+        "message": "World Cup RAG API",
+        "version": "2.0.0",
+        "description": "Chatbot especializado em Copa do Mundo FIFA com RAG",
         "endpoints": {
             "health": "/health",
             "chat": "/chat",
+            "status": "/status",
             "docs": "/docs"
         }
     }
@@ -316,118 +558,30 @@ async def root():
 @app.get("/status")
 async def status_check():
     return {
-        "system": "Chat Sport RAG API",
+        "system": "World Cup RAG API",
         "qa_system_ready": qa_system is not None,
-        "cache_size": len(response_cache),
-        "quick_answers": len(QUICK_ANSWERS),
+        "quick_answers": len(WORLD_CUP_QUICK_ANSWERS),
         "model_config": {
-            "model": "tinyllama",
-            "timeout": "120s backend + 150s frontend",
-            "chunk_size": 200,
-            "retriever_k": 2,
-            "num_predict": 300,
-            "temperature": 0.2,
-            "stop_tokens": ["Human:", "Assistant:", "Pergunta:", "Resposta:"],
-            "llm_timeout": "60s"
+            "model": current_model if current_model else "qwen2.5:3b",  # Modelo real em uso
+            "fallback_model": "llama3.2",
+            "timeout": "60s",
+            "chunk_size": 600,  # Corrigido para refletir o valor real
+            "chunk_overlap": 50,  # Corrigido para refletir o valor real
+            "separator": "=====",
+            "retriever_k": 3,  # Corrigido para refletir o valor real
+            "score_threshold": 0.2,  # Adicionado
+            "temperature": 0.0,
+            "anti_hallucination": True,
+            "individual_documents": True,
+            "comprehensive_indexing": True,
+            "ultra_clear_distinction": True,
+            "champion_vs_host_fix": True,
+            "critical_improvement": True,
+            "ultra_restrictive_rag": True,
+            "portuguese_optimized": True
         },
-        "performance": {
-            "cache_response_time": "< 0.5s",
-            "rag_response_time": "3-30s",
-            "total_timeout": "150s"
-        },
-        "debug_endpoint": "/chat-debug (verbose logging)"
+        "data_sources": ["world_cup.csv", "fifa_ranking_2022-10-06.csv", "matches_1930_2022.csv"]
     }
 
-@app.post("/chat-debug", response_model=QuestionResponse)
-async def ask_question_debug(request: QuestionRequest):
-    """Endpoint de debug que mostra informações detalhadas da resposta"""
-    
-    print(f"🔥 [DEBUG-VERBOSE] Recebida requisição: {request.message}")
-    
-    if qa_system is None:
-        print("❌ [DEBUG] Sistema RAG não está inicializado!")
-        raise HTTPException(
-            status_code=500,
-            detail="Sistema RAG não inicializado. Verifique os logs do servidor."
-        )
-    
-    quick_answer = get_quick_answer(request.message)
-    if quick_answer:
-        print("⚡ [DEBUG] Resposta rápida encontrada!")
-        return QuestionResponse(
-            answer=f"⚡ **Resposta Rápida**: {quick_answer}",
-            success=True,
-            message="Resposta rápida do cache"
-        )
-    
-    cache_key = request.message.lower().strip()
-    if cache_key in response_cache:
-        print("💾 [DEBUG] Resposta encontrada no cache!")
-        return QuestionResponse(
-            answer=f"💾 **Do Cache**: {response_cache[cache_key]}",
-            success=True,
-            message="Resposta do cache"
-        )
-    
-    try:
-        print("🔍 [DEBUG-VERBOSE] Iniciando invoke do qa_system...")
-        print(f"📝 [DEBUG-VERBOSE] Query original: '{request.message}'")
-        
-        # Busca documentos relevantes primeiro
-        retriever = qa_system.retriever
-        docs = retriever.get_relevant_documents(request.message)
-        print(f"📚 [DEBUG-VERBOSE] Documentos encontrados: {len(docs)}")
-        for i, doc in enumerate(docs):
-            print(f"📄 [DEBUG-VERBOSE] Doc {i+1}: {doc.page_content[:100]}...")
-        
-        import time
-        start_time = time.time()
-        
-        # Invoke manual para mais controle
-        response = qa_system.invoke({"query": request.message})
-        
-        end_time = time.time()
-        duration = end_time - start_time
-        
-        print(f"⏰ [DEBUG-VERBOSE] Duração: {duration:.2f}s")
-        print(f"📋 [DEBUG-VERBOSE] Resposta bruta: {response}")
-        print(f"🔍 [DEBUG-VERBOSE] Tipo da resposta: {type(response)}")
-        
-        if isinstance(response, dict) and "result" in response:
-            answer = response["result"]
-            print(f"📝 [DEBUG-VERBOSE] Result extraído: '{answer}'")
-        else:
-            answer = str(response)
-            print(f"📝 [DEBUG-VERBOSE] Resposta convertida: '{answer}'")
-        
-        # Limpeza da resposta
-        answer = answer.replace("Com base nas informações sobre futebol, responda em português brasileiro de forma completa:", "").strip()
-        answer = answer.replace("Resposta completa:", "").strip()
-        
-        print(f"✨ [DEBUG-VERBOSE] Resposta final limpa ({len(answer)} chars): '{answer}'")
-        
-        # Salva no cache
-        if len(response_cache) < 50:
-            response_cache[cache_key] = answer
-            print("💾 [DEBUG-VERBOSE] Resposta salva no cache!")
-        
-        return QuestionResponse(
-            answer=f"🤖 **RAG/LLM** ({duration:.1f}s): {answer}",
-            success=True,
-            message=f"Processado em {duration:.1f}s com {len(docs)} documentos"
-        )
-        
-    except Exception as e:
-        print(f"❌ [DEBUG-VERBOSE] Erro detalhado: {str(e)}")
-        import traceback
-        print(f"❌ [DEBUG-VERBOSE] Traceback: {traceback.format_exc()}")
-        raise HTTPException(status_code=500, detail=f"Erro: {str(e)}")
-
 if __name__ == "__main__":
-    uvicorn.run(
-        "api:app",
-        host="0.0.0.0",
-        port=8000,
-        reload=True,
-        log_level="info"
-    )
+    uvicorn.run("api:app", host="0.0.0.0", port=8000, reload=True)

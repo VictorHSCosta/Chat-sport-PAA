@@ -1,44 +1,44 @@
 import { useState } from 'react'
-import { Sparkles } from 'lucide-react'
+import { Trophy } from 'lucide-react'
 
 const suggestedQuestions = [
-  "Quando foi a última Copa do Mundo?",
-  "Quem é o maior jogador de todos os tempos?",
-  "Quantas Champions League o Real Madrid tem?",
-  "Qual time tem mais Brasileirões?",
-  "Quem ganhou a Bola de Ouro de 2024?",
-  "Como está o Palmeiras este ano?",
-  "Qual a história do Pelé?",
-  "Quando é a próxima Copa do Mundo?",
-  "Quem são os maiores artilheiros da história?",
-  "Qual o maior clássico do futebol brasileiro?"
+  "Quantas copas o Brasil tem?",
+  "Quem foi campeão da Copa de 2022?",
+  "Qual país sediou mais Copas do Mundo?",
+  "Quem foi o artilheiro da Copa de 2018?",
+  "Quando será a próxima Copa do Mundo?",
+  "Qual foi a primeira Copa do Mundo?",
+  "Quantos gols Pelé fez em Copas?",
+  "Quais países nunca ganharam uma Copa?",
+  "Qual Copa teve mais gols?",
+  "Argentina vs Brasil: histórico nas Copas"
 ]
 
 const WelcomeMessage = ({ onExampleClick }) => {
   const examplePrompts = [
     {
-      title: "Copa do Mundo",
-      text: "Quando foi a última Copa do Mundo?"
+      title: "Brasil Pentacampeão",
+      text: "Quantas copas o Brasil tem?"
     },
     {
-      title: "Maiores Jogadores",
-      text: "Quem é o maior jogador de todos os tempos?"
+      title: "Copa Qatar 2022",
+      text: "Quem foi campeão da Copa de 2022?"
     },
     {
-      title: "Champions League",
-      text: "Quantas Champions League o Real Madrid tem?"
+      title: "História das Copas",
+      text: "Qual país sediou mais Copas do Mundo?"
     },
     {
-      title: "Futebol Brasileiro",
-      text: "Qual time tem mais Brasileirões?"
+      title: "Artilheiros Históricos",
+      text: "Quem foi o artilheiro da Copa de 2018?"
     },
     {
-      title: "Bola de Ouro",
-      text: "Quem ganhou a Bola de Ouro de 2024?"
+      title: "Próxima Copa",
+      text: "Quando será a próxima Copa do Mundo?"
     },
     {
-      title: "História do Futebol",
-      text: "Qual a história do Pelé?"
+      title: "Pelé nas Copas",
+      text: "Quantos gols Pelé fez em Copas?"
     }
   ]
 
@@ -52,10 +52,10 @@ const WelcomeMessage = ({ onExampleClick }) => {
 
   return (
     <div className="welcome-message">
-      <h2 className="welcome-title">⚽ Bem-vindo ao FootBot!</h2>
+      <h2 className="welcome-title">🏆 Bem-vindo ao World Cup Chat!</h2>
       <p className="welcome-subtitle">
-        Sou seu assistente especializado em futebol. Posso responder sobre jogadores, times, 
-        competições, história e curiosidades do mundo do futebol.
+        Sou seu assistente especializado em Copa do Mundo FIFA. Posso responder sobre história, 
+        estatísticas, jogadores, países campeões e curiosidades das Copas do Mundo de 1930 a 2022.
       </p>
       
       <div className="example-prompts">
@@ -81,8 +81,8 @@ const WelcomeMessage = ({ onExampleClick }) => {
           gap: '0.5rem', 
           justifyContent: 'center' 
         }}>
-          <Sparkles size={20} color="#1f6feb" />
-          Sugestões Aleatórias
+          <Trophy size={20} color="#1f6feb" />
+          Perguntas sobre Copa do Mundo
         </h3>
         <div className="random-suggestions">
           {randomSuggestions.map((suggestion, index) => (

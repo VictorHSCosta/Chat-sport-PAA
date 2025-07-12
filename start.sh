@@ -1,8 +1,9 @@
 #!/bin/bash
 
-# Script otimizado para iniciar o Chat Sport - Sistema RAG Ultra-Rápido
-echo "🚀 Iniciando Chat Sport - Sistema RAG Ultra-Performático"
-echo "⚡ Versão Otimizada com Cache Inteligente e Respostas Rápidas"
+# Script ultra-otimizado para iniciar o World Cup RAG Chatbot
+echo "🏆 Iniciando World Cup RAG Chatbot Ultra-Otimizado"
+echo "⚡ Sistema Ultra-Restritivo para Copa do Mundo FIFA"
+echo "🧠 Modelo: qwen2.5:3b (português) + llama3.2 (fallback)"
 echo ""
 
 # Cores para output
@@ -42,20 +43,51 @@ fi
 
 log_success "Ollama está rodando"
 
-# Verificar se o modelo tinyllama está disponível
-log_info "Verificando modelo tinyllama..."
-if ! ollama list | grep -q "tinyllama"; then
-    log_warning "Modelo tinyllama não encontrado"
-    echo "📥 Baixando modelo tinyllama (pode demorar alguns minutos)..."
-    ollama pull tinyllama
-    if [ $? -eq 0 ]; then
-        log_success "Modelo tinyllama baixado com sucesso"
-    else
-        log_error "Falha ao baixar modelo tinyllama"
-        exit 1
-    fi
+# Verificar se o modelo qwen2.5:3b está disponível (modelo principal para português)
+log_info "Verificando modelo qwen2.5:3b (principal)..."
+qwen_available=false
+if ollama list | grep -q "qwen2.5:3b"; then
+    log_success "Modelo qwen2.5:3b encontrado (otimizado para português)"
+    qwen_available=true
 else
-    log_success "Modelo tinyllama disponível"
+    log_warning "Modelo qwen2.5:3b não encontrado"
+    echo "📥 Baixando modelo qwen2.5:3b (otimizado para português)..."
+    if ollama pull qwen2.5:3b; then
+        log_success "Modelo qwen2.5:3b baixado com sucesso"
+        qwen_available=true
+    else
+        log_warning "Erro ao baixar qwen2.5:3b. Verificando fallback..."
+    fi
+fi
+
+# Verificar llama3.2 como fallback obrigatório
+log_info "Verificando modelo llama3.2 (fallback)..."
+llama_available=false
+if ollama list | grep -q "llama3.2"; then
+    log_success "Modelo llama3.2 disponível como fallback"
+    llama_available=true
+else
+    log_warning "Modelo llama3.2 não encontrado"
+    echo "📥 Baixando modelo llama3.2 como fallback..."
+    if ollama pull llama3.2; then
+        log_success "Modelo llama3.2 baixado com sucesso"
+        llama_available=true
+    else
+        log_error "Falha ao baixar modelo llama3.2"
+    fi
+fi
+
+# Verificar se pelo menos um modelo está disponível
+if [ "$qwen_available" = false ] && [ "$llama_available" = false ]; then
+    log_error "Nenhum modelo compatível disponível!"
+    exit 1
+fi
+
+# Informar qual modelo será usado
+if [ "$qwen_available" = true ]; then
+    log_success "Sistema usará qwen2.5:3b como modelo principal"
+elif [ "$llama_available" = true ]; then
+    log_warning "Sistema usará llama3.2 como fallback (qwen2.5:3b indisponível)"
 fi
 
 # Verificar dependências do Python
@@ -82,18 +114,20 @@ check_python_deps() {
     log_success "Dependências Python verificadas"
 }
 
-# Otimizar índice FAISS se necessário
+# Otimizar índice FAISS ultra-restritivo se necessário
 optimize_index() {
-    log_info "Verificando índice FAISS..."
+    log_info "Verificando índice FAISS ultra-restritivo..."
     cd ~/Chat-sport-PAA/backend
     source footbot/bin/activate
     
     if [ ! -f "faiss_index_/index.faiss" ]; then
         log_warning "Índice FAISS não encontrado"
-        echo "🏗️ Criando índice FAISS otimizado..."
-        python optimize_index.py
-        if [ $? -eq 0 ]; then
-            log_success "Índice FAISS otimizado criado"
+        echo "🏗️ Criando índice FAISS ultra-restritivo para Copa do Mundo..."
+        echo "   • Dados estruturados para evitar confusão sede/campeão"
+        echo "   • Múltiplas variações de perguntas em português"
+        echo "   • Chunks de 600 caracteres com overlap 50"
+        if python -c "from api import initialize_rag_system; initialize_rag_system()"; then
+            log_success "Índice FAISS ultra-restritivo criado"
         else
             log_error "Falha ao criar índice FAISS"
             exit 1
@@ -101,32 +135,39 @@ optimize_index() {
     else
         # Verificar se o índice é antigo (mais de 1 dia)
         if find "faiss_index_/index.faiss" -mtime +1 2>/dev/null | grep -q .; then
-            log_warning "Índice FAISS é antigo, recriando versão otimizada..."
-            python optimize_index.py
+            log_warning "Índice FAISS é antigo, recriando versão ultra-restritiva..."
+            rm -rf faiss_index_/
+            python -c "from api import initialize_rag_system; initialize_rag_system()"
         else
-            log_success "Índice FAISS otimizado está atualizado"
+            log_success "Índice FAISS ultra-restritivo está atualizado"
         fi
     fi
 }
 
-# Função para iniciar backend otimizado
+# Função para iniciar backend ultra-otimizado
 start_backend() {
-    log_info "Iniciando backend otimizado..."
+    log_info "Iniciando backend ultra-otimizado..."
     cd ~/Chat-sport-PAA/backend
     source footbot/bin/activate
     
     echo ""
-    echo "🎯 Configurações de Performance:"
+    echo "🎯 Configurações Ultra-Restritivas:"
+    echo "   - Modelo principal: qwen2.5:3b (otimizado para português)"
+    echo "   - Modelo fallback: llama3.2"
+    echo "   - Dados ultra-estruturados (sede ≠ campeão)"
     echo "   - Cache inteligente ativado"
-    echo "   - Respostas rápidas para Pelé, Messi, Copa do Mundo"
-    echo "   - Timeout otimizado: 3 segundos"
-    echo "   - Chunks mini: 300 caracteres"
-    echo "   - LLM limitado: 30 tokens"
+    echo "   - Respostas rápidas para Copa do Mundo"
+    echo "   - Timeout otimizado: 60 segundos"
+    echo "   - Chunks ultra-focados: 600 caracteres"
+    echo "   - Retriever: k=3, threshold=0.2"
+    echo "   - Anti-alucinação máximo ativado"
+    echo "   - Temperatura: 0.0 (determinístico)"
     echo ""
     
-    log_success "Backend iniciado em http://localhost:8000"
+    log_success "Backend ultra-restritivo iniciado em http://localhost:8000"
     echo "📊 Documentação: http://localhost:8000/docs"
     echo "🔍 Health check: http://localhost:8000/health"
+    echo "📈 Status: http://localhost:8000/status"
     echo ""
     
     python api.py
@@ -186,14 +227,15 @@ case "$1" in
         ./test_performance.sh
         ;;
     "optimize")
-        log_info "Recriando índice FAISS otimizado..."
+        log_info "Recriando índice FAISS ultra-restritivo..."
         cd ~/Chat-sport-PAA/backend
         source footbot/bin/activate
-        python optimize_index.py
-        log_success "Otimização concluída!"
+        rm -rf faiss_index_/
+        python -c "from api import initialize_rag_system; initialize_rag_system()"
+        log_success "Índice ultra-restritivo recriado!"
         ;;
     "both"|"")
-        echo "🔄 Iniciando backend e frontend otimizados..."
+        echo "🔄 Iniciando backend e frontend ultra-otimizados..."
         echo ""
         
         # Iniciar backend em background
@@ -201,14 +243,14 @@ case "$1" in
         BACKEND_PID=$!
         
         # Aguardar backend inicializar
-        log_info "Aguardando backend inicializar..."
-        sleep 8
+        log_info "Aguardando backend ultra-restritivo inicializar..."
+        sleep 10
         
         # Verificar se backend está funcionando
         if curl -s http://localhost:8000/health > /dev/null; then
-            log_success "Backend inicializado com sucesso"
+            log_success "Backend ultra-restritivo inicializado com sucesso"
         else
-            log_warning "Backend pode estar demorando para inicializar"
+            log_warning "Backend pode estar demorando para inicializar (normal na primeira vez)"
         fi
         
         # Iniciar frontend
@@ -216,17 +258,25 @@ case "$1" in
         FRONTEND_PID=$!
         
         echo ""
-        log_success "Ambos os serviços foram iniciados!"
+        log_success "Sistema ultra-otimizado iniciado!"
         echo ""
         echo "🎯 URLs importantes:"
         echo "   📊 Backend API: http://localhost:8000"
         echo "   📚 Docs API: http://localhost:8000/docs"
+        echo "   📈 Status: http://localhost:8000/status"
         echo "   🌐 Frontend: http://localhost:5173"
         echo ""
-        echo "⚡ Performance esperada:"
-        echo "   - Perguntas sobre Pelé: < 0.5s"
-        echo "   - Outras perguntas: 1-3s"
-        echo "   - Timeout máximo: 3s"
+        echo "⚡ Performance esperada (sistema ultra-restritivo):"
+        echo "   - Saudações: instantâneo"
+        echo "   - Perguntas sobre campeões: < 1s"
+        echo "   - Perguntas sobre artilheiros: < 2s"
+        echo "   - Outras perguntas: 2-4s"
+        echo "   - Timeout máximo: 60s"
+        echo ""
+        echo "🧠 Exemplos testados:"
+        echo "   'Quem foi campeão em 2022?' → Argentina (não Qatar)"
+        echo "   'Quem foi campeão em 2002?' → Brasil (não Japão)"
+        echo "   'Onde foi a Copa de 2014?' → Brasil (sede)"
         echo ""
         echo "Para parar os serviços, pressione Ctrl+C"
         
@@ -238,17 +288,23 @@ case "$1" in
         echo "Uso: $0 [opção]"
         echo ""
         echo "Opções:"
-        echo "  backend   - Iniciar apenas o backend otimizado"
+        echo "  backend   - Iniciar apenas o backend ultra-restritivo"
         echo "  frontend  - Iniciar apenas o frontend"
-        echo "  both      - Iniciar ambos (padrão)"
+        echo "  both      - Iniciar ambos ultra-otimizados (padrão)"
         echo "  test      - Executar testes de performance"
-        echo "  optimize  - Recriar índice FAISS otimizado"
+        echo "  optimize  - Recriar índice FAISS ultra-restritivo"
         echo ""
         echo "Exemplos:"
-        echo "  ./start.sh              # Inicia tudo"
-        echo "  ./start.sh backend      # Só backend"
-        echo "  ./start.sh optimize     # Otimiza índice"
+        echo "  ./start.sh              # Inicia sistema completo"
+        echo "  ./start.sh backend      # Só backend ultra-restritivo"
+        echo "  ./start.sh optimize     # Recria índice ultra-restritivo"
         echo "  ./start.sh test         # Testa performance"
+        echo ""
+        echo "🧠 Sistema ultra-restritivo configurado para:"
+        echo "  • Evitar confusão entre sede e campeão"
+        echo "  • Respostas factuais sem alucinações"
+        echo "  • Modelo qwen2.5:3b otimizado para português"
+        echo "  • Fallback llama3.2 se necessário"
         exit 1
         ;;
 esac

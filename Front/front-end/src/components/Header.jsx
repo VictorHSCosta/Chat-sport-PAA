@@ -1,4 +1,4 @@
-import { Bot, Wifi, WifiOff, Loader2 } from 'lucide-react'
+import { Trophy, Wifi, WifiOff, Loader2 } from 'lucide-react'
 
 const Header = ({ apiStatus }) => {
   const getStatusIcon = () => {
@@ -29,10 +29,10 @@ const Header = ({ apiStatus }) => {
 
   return (
     <header className="header">
-      <Bot size={24} color="#1f6feb" />
+      <Trophy size={24} color="#1f6feb" />
       <div>
-        <h1 className="header-title">FootBot</h1>
-        <p className="header-subtitle">Seu assistente especializado em futebol</p>
+        <h1 className="header-title">World Cup Chat</h1>
+        <p className="header-subtitle">Seu assistente especializado em Copa do Mundo FIFA</p>
       </div>
       <div className="api-status">
         {getStatusIcon()}

@@ -24,7 +24,10 @@ export class FootballAPI {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Accept': 'application/json',
         },
+        mode: 'cors',
+        credentials: 'omit',
         body: JSON.stringify({
           message: message
         }),
@@ -59,7 +62,10 @@ export class FootballAPI {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
-        }
+          'Accept': 'application/json',
+        },
+        mode: 'cors',
+        credentials: 'omit',
       })
 
       if (!response.ok) {

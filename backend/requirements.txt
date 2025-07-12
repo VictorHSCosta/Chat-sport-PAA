@@ -10,3 +10,7 @@ faiss-cpu==1.7.4
 huggingface-hub==0.19.4
 transformers==4.36.2
 torch==2.1.1
+requests==2.31.0
+beautifulsoup4==4.12.2
+duckduckgo-search==4.1.1
+pandas==2.1.4
