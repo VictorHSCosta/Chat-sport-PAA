@@ -1,3 +1,4 @@
+from langchain_community.llms import Ollama
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -7,7 +8,6 @@ from langchain_community.vectorstores import FAISS
 from sentence_transformers import SentenceTransformer
 from langchain.chains import RetrievalQA
 from langchain.prompts import PromptTemplate
-from langchain_community.llms import Ollama
 from langchain_core.documents import Document
 import uvicorn
 import os
@@ -239,7 +239,7 @@ def load_csv_files(directory_path):
     
     for csv_file in csv_files:
         try:
-            df = pd.read_csv(csv_file, encoding='utf-8')
+            df = pd.read_csv(csv_file, encoding='latin1')
             file_name = os.path.basename(csv_file)
             
             if 'world_cup' in file_name.lower():
@@ -552,7 +552,7 @@ def process_csv_data():
     for csv_file in csv_files:
         try:
             print(f"📄 Processando {os.path.basename(csv_file)}...")
-            df = pd.read_csv(csv_file, encoding='utf-8')
+            df = pd.read_csv(csv_file, encoding='latin1')
             
             if 'world_cup.csv' in csv_file:
                 # Dados principais da Copa do Mundo

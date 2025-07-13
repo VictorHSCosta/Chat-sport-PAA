@@ -8,6 +8,8 @@ from langchain.text_splitter import CharacterTextSplitter
 from langchain_community.embeddings import HuggingFaceEmbeddings
 from langchain_community.vectorstores import FAISS
 from langchain_core.documents import Document
+from langchain.text_splitter import RecursiveCharacterTextSplitter
+
 
 def load_csv_files(directory_path):
     """Load all CSV files from the specified directory and convert to documents."""
@@ -81,6 +83,33 @@ def load_csv_files(directory_path):
     
     return documents
 
+def create_advanced_chunks(documents):
+    """Cria chunks multi-nível para otimização do RAG."""
+    # Você pode definir essas variáveis aqui ou passá-las como argumentos
+    chunk_sizes = [300, 800, 1500]
+    chunk_overlaps = [50, 100, 200]
+
+    all_chunks = []
+    for i, size in enumerate(chunk_sizes):
+        splitter = RecursiveCharacterTextSplitter(
+            chunk_size=size,
+            chunk_overlap=chunk_overlaps[i],
+            length_function=len,
+            is_separator_regex=False,
+        )
+        chunks = splitter.split_documents(documents)
+        all_chunks.extend(chunks)
+    return all_chunks
+
+def setup_rag_system():
+    # ... (parte inicial da sua função setup_rag_system) ...
+    print("📁 Carregando dados da Copa do Mundo...")
+    documents = load_csv_files("wcdataset")
+
+    if not documents:
+        print("❌ Nenhum arquivo CSV encontrado!")
+        return False
+
 def recreate_optimized_index():
     """Recria o índice FAISS com configurações otimizadas para Copa do Mundo"""
     
@@ -101,9 +130,8 @@ def recreate_optimized_index():
         return False
     
     # Chunks otimizados para Copa do Mundo
-    print("✂️ Criando chunks otimizados (600 chars)...")
-    text_splitter = CharacterTextSplitter(chunk_size=600, chunk_overlap=50, separator="\n")
-    docs = text_splitter.split_documents(documents)
+    print("✂️ Criando chunks multi-nível otimizados...")
+    docs = create_advanced_chunks(documents)
     print(f"📝 Criados {len(docs)} chunks otimizados")
     
     # Embedding mais rápido

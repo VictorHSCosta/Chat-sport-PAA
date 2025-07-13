@@ -183,7 +183,7 @@ try:
     
     for csv_file in csv_files:
         try:
-            df = pd.read_csv(csv_file, encoding='utf-8')
+            df = pd.read_csv(csv_file, encoding='latin1')
             print(f'✅ {os.path.basename(csv_file)}: {len(df)} linhas, {len(df.columns)} colunas')
         except Exception as e:
             print(f'❌ Erro ao ler {csv_file}: {e}')
