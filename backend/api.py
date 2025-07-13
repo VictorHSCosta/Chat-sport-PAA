@@ -1156,7 +1156,9 @@ def initialize_rag_system():
         )
         
         # Prompt melhorado para lidar com múltiplos chunks
-        template = """Você é um especialista em Copa do Mundo FIFA. Use APENAS os dados fornecidos para responder.
+        template = """Você é um especialista em Copa do Mundo FIFA. Use APENAS os dados fornecidos para responder. É CRÍTICO que você **NÃO INVENTE** ou utilize conhecimento prévio para responder.
+Se a resposta NÃO ESTIVER CLARAMENTE presente no contexto, responda EXATAMENTE: "Não tenho informações suficientes para responder a isso."
+Não adicione informações que não estejam no contexto. Seja conciso e direto.
 
 INSTRUÇÃO IMPORTANTE: 
 - Se encontrar informações conflitantes, priorize os dados mais específicos
