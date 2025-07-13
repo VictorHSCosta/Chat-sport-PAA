@@ -1,4 +1,3 @@
-from langchain_community.llms import Ollama
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -8,6 +7,7 @@ from langchain_community.vectorstores import FAISS
 from sentence_transformers import SentenceTransformer
 from langchain.chains import RetrievalQA
 from langchain.prompts import PromptTemplate
+from langchain_community.llms import Ollama
 from langchain_core.documents import Document
 import uvicorn
 import os
@@ -480,7 +480,42 @@ Campeão: {champion}
                         "rows": len(finals_only)
                     }
                 ))
+            
+            elif 'all_goals' in file_name.lower():
+                content_parts = []
+                content_parts.append("=== DETALHES DE TODOS OS GOLS (1930-2022) ===\n\n")
+                
+                # Agrupamento por torneio
+                for tournament in df['tournament_name'].unique():
+                    tournament_data = df[df['tournament_name'] == tournament]
+                    year = re.search(r'\b(19\d{2}|20\d{2})\b', str(tournament)).group(0)
                     
+                    content_parts.append(f"★ COPADOMUNDO {year}:\n")
+                    
+                    # Artilheiro principal
+                    top_scorer = tournament_data['player_name'].mode()[0]
+                    goals_count = tournament_data['player_name'].value_counts().max()
+                    content_parts.append(f"Artilheiro: {top_scorer} ({goals_count} gols)\n")
+                    
+                    # Detalhes dos gols
+                    content_parts.append("Gols marcados:\n")
+                    for _, row in tournament_data.iterrows():
+                        content_parts.append(
+                            f"- {row['minute']}' {row['player_name']} ({row['team_name']}) vs {row['opponent']}\n"
+                        )
+                    content_parts.append("\n")
+                
+                content = "".join(content_parts)
+                documents.append(Document(
+                    page_content=content,
+                    metadata={
+                        "source": csv_file,
+                        "file_name": file_name,
+                        "data_category": "goals_details",
+                        "rows": len(df)
+                    }
+                ))
+
             else:
                 # Outros CSVs
                 content = f"Dados de {file_name}:\n{df.head(5).to_string(index=False)}"
@@ -952,7 +987,89 @@ def process_csv_data():
                                     "source": "fifa_ranking.csv"
                                 }
                             ))
-        
+            elif 'all_goals' in csv_file.lower():
+                print(f"   ⚽ Processando dados detalhados de gols ({len(df)} registros)...")
+                
+                # Documento principal com todos os artilheiros
+                content_parts = []
+                content_parts.append("=== ARTILHEIROS DETALHADOS DA COPA DO MUNDO ===\n\n")
+                
+                # Agrupar por torneio
+                for tournament in df['tournament_name'].unique():
+                    if pd.isna(tournament):
+                        continue
+                        
+                    # Extrair ano do nome do torneio
+                    year_match = re.search(r'\b(19\d{2}|20\d{2})\b', str(tournament))
+                    year = year_match.group(1) if year_match else str(tournament)
+                    
+                    tournament_goals = df[df['tournament_name'] == tournament]
+                    
+                    # Criar nome completo do jogador
+                    tournament_goals['player_full_name'] = (
+                        tournament_goals['given_name'] + ' ' + tournament_goals['family_name']
+                    )
+                    
+                    top_scorers = tournament_goals['player_full_name'].value_counts()
+                    
+                    if not top_scorers.empty:
+                        top_scorer = top_scorers.index[0]
+                        goals = top_scorers.iloc[0]
+                        
+                        # Adicionar múltiplas variações para o RAG (igual aos outros documentos)
+                        content_parts.append(f"COPA DE {year}:\n")
+                        content_parts.append(f"Artilheiro principal: {top_scorer} ({goals} gols)\n")
+                        content_parts.append(f"Artilheiro {year}: {top_scorer}\n")
+                        content_parts.append(f"Goleador {year}: {top_scorer}\n")
+                        content_parts.append(f"Maior artilheiro {year}: {top_scorer}\n")
+                        content_parts.append(f"Quem foi artilheiro de {year}? {top_scorer}\n")
+                        content_parts.append(f"Quem marcou mais gols em {year}? {top_scorer} ({goals} gols)\n")
+                        
+                        # Adicionar detalhes dos gols (formato padronizado)
+                        player_goals = tournament_goals[tournament_goals['player_full_name'] == top_scorer]
+                        for _, goal in player_goals.iterrows():
+                            minute = goal.get('minute_label', '')
+                            against = goal.get('away_team', '') if goal.get('home_team', '') == goal.get('player_team_name', '') else goal.get('home_team', '')
+                            content_parts.append(f"- Gol contra {against} ({minute})\n")
+                        
+                        content_parts.append("\n")
+                
+                content = "".join(content_parts)
+                all_docs.append(Document(
+                    page_content=content,
+                    metadata={
+                        "source": csv_file,
+                        "file_name": os.path.basename(csv_file),
+                        "data_category": "detailed_goals",
+                        "rows": len(df)
+                    }
+                ))
+                
+                # Documento adicional focado apenas em artilheiros (como nos outros casos)
+                scorers_content = []
+                scorers_content.append("=== LISTA RÁPIDA DE ARTILHEIROS ===\n\n")
+                for tournament in df['tournament_name'].unique():
+                    if pd.isna(tournament):
+                        continue
+                        
+                    year_match = re.search(r'\b(19\d{2}|20\d{2})\b', str(tournament))
+                    year = year_match.group(1) if year_match else str(tournament)
+                    
+                    tournament_goals = df[df['tournament_name'] == tournament]
+                    if 'player_full_name' in tournament_goals.columns:
+                        top_scorer = tournament_goals['player_full_name'].value_counts().index[0]
+                        scorers_content.append(f"{year}: {top_scorer}\n")
+                
+                content = "".join(scorers_content)
+                all_docs.append(Document(
+                    page_content=content,
+                    metadata={
+                        "source": csv_file,
+                        "file_name": os.path.basename(csv_file),
+                        "data_category": "scorers_quick_list",
+                        "rows": len(df)
+                    }
+                ))
         except Exception as e:
             print(f"⚠️ Erro ao processar {csv_file}: {e}")
             continue
@@ -1157,9 +1274,7 @@ def initialize_rag_system():
         
         # Prompt melhorado para lidar com múltiplos chunks
         template = """Você é um especialista em Copa do Mundo FIFA. Use APENAS os dados fornecidos para responder. É CRÍTICO que você **NÃO INVENTE** ou utilize conhecimento prévio para responder.
-Se a resposta NÃO ESTIVER CLARAMENTE presente no contexto, responda EXATAMENTE: "Não tenho informações suficientes para responder a isso."
 Não adicione informações que não estejam no contexto. Seja conciso e direto.
-
 INSTRUÇÃO IMPORTANTE: 
 - Se encontrar informações conflitantes, priorize os dados mais específicos
 - Sempre distinga claramente entre SEDE (onde aconteceu) e CAMPEÃO (quem ganhou)

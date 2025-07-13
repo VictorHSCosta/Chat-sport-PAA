@@ -58,6 +58,45 @@ def load_csv_files(directory_path):
                 for i in range(sample_size):
                     row = df.iloc[i]
                     content += f"Match {i+1}: {str(row.to_dict())}\n"
+            
+            elif 'all_goals' in file_name.lower():
+                content_parts = []
+                content_parts.append("=== DETALHES COMPLETOS DE TODOS OS GOLS (1930-2022) ===\n\n")
+                
+                # Processar por torneio
+                for tournament in df['tournament_name'].unique():
+                    if pd.isna(tournament):
+                        continue
+                        
+                    # Extrair ano do torneio
+                    year_match = re.search(r'\b(19\d{2}|20\d{2})\b', str(tournament))
+                    year = year_match.group(1) if year_match else str(tournament)
+                    
+                    tournament_goals = df[df['tournament_name'] == tournament]
+                    
+                    # Criar nome completo do jogador
+                    tournament_goals['player_full_name'] = (
+                        tournament_goals['given_name'] + ' ' + tournament_goals['family_name']
+                    )
+                    
+                    # Encontrar artilheiro
+                    top_scorer = tournament_goals['player_full_name'].mode()[0]
+                    goals_count = tournament_goals['player_full_name'].value_counts().max()
+                    
+                    # Adicionar ao conteúdo
+                    content_parts.append(f"★ COPA {year}:\n")
+                    content_parts.append(f"Artilheiro: {top_scorer} ({goals_count} gols)\n")
+                    content_parts.append(f"Lista de gols:\n")
+                    
+                    # Detalhes dos gols
+                    for _, goal in tournament_goals.iterrows():
+                        minute = goal.get('minute_label', '')
+                        against = goal.get('away_team', '') if goal.get('home_team', '') == goal.get('player_team_name', '') else goal.get('home_team', '')
+                        content_parts.append(f"- {goal['player_full_name']} vs {against} ({minute})\n")
+                    
+                    content_parts.append("\n")
+                
+                content = "".join(content_parts)
                     
             else:
                 content = f"Data from {file_name}:\n\n"
