@@ -11,6 +11,10 @@ import pandas as pd
 import os
 import uvicorn
 from typing import Optional
+from dotenv import load_dotenv
+
+# Carregar variáveis de ambiente do arquivo .env
+load_dotenv()
 
 # LlamaIndex imports
 from llama_index.llms.groq import Groq
@@ -47,7 +51,7 @@ template = None
 datasets_loaded = False
 
 # Configuração da API Key do Groq
-GROQ_API_KEY = os.getenv("GROQ_API_KEY", "")
+GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 
 # Provedor LLM - usando apenas Groq para simplicidade
 LLM_PROVIDER = "groq"
@@ -56,6 +60,11 @@ def initialize_llm():
     """Inicializar o LLM Groq"""
     global llm
     try:
+        if not GROQ_API_KEY:
+            print("❌ GROQ_API_KEY não configurada!")
+            print("💡 Configure com: export GROQ_API_KEY=sua_chave_aqui")
+            return False
+            
         print("🚀 Inicializando Groq LLM...")
         llm = Groq(model='llama3-70b-8192', api_key=GROQ_API_KEY)
         print("✅ Groq LLM inicializado com sucesso!")

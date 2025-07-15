@@ -1,22 +1,44 @@
-# 🏆 World Cup RAG Chatbot
+# 🏆 Chat-sport-PAA - World Cup RAG Chatbot
 
-Um chatbot inteligente especializado em Copa do Mundo FIFA usando RAG (Retrieval-Augmented Generation) com Ollama e dados históricos.
+Chatbot especializado em Copa do Mundo FIFA usando **LlamaIndex + Groq** (llama3-70b-8192).
 
-## ⚡ Início Rápido
+## ⚡ Arquitetura Essencial
 
+- **Backend**: FastAPI + LlamaIndex + Groq
+- **Frontend**: React + Vite
+- **Dados**: CSV (World Cup + Matches essenciais)
+- **LLM**: Groq llama3-70b-8192
+
+## 🚀 Configuração Rápida
+
+### 1. Pré-requisitos
 ```bash
-# 1. Configure o ambiente
-./setup.sh
+# Python 3.8+
+python3 --version
 
-# 2. Inicie o sistema
-./start.sh
-
-# 3. Acesse o chatbot
-# Frontend: http://localhost:5173
-# API: http://localhost:8000/docs
+# Node.js 18+
+node --version
 ```
 
-## 📚 Sobre o Projeto
+### 2. Setup Automático
+```bash
+chmod +x setup.sh start.sh
+./setup.sh
+```
+
+> **Nota**: O setup criará automaticamente o arquivo `backend/.env`. 
+> Edite este arquivo e configure sua GROQ_API_KEY obtida em: https://console.groq.com/keys
+
+### 3. Executar
+```bash
+./start.sh
+```
+
+## 🌐 Acesso
+
+- **Frontend**: http://localhost:5173
+- **API**: http://localhost:8000
+- **Docs**: http://localhost:8000/docs
 
 Este chatbot utiliza dados históricos da Copa do Mundo FIFA (1930-2022) incluindo:
 - Histórico completo de todas as Copas do Mundo
