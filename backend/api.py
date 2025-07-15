@@ -47,7 +47,7 @@ template = None
 datasets_loaded = False
 
 # Configuração da API Key do Groq
-GROQ_API_KEY = os.getenv("GROQ_API_KEY", "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")
+GROQ_API_KEY = os.getenv("GROQ_API_KEY", "")
 
 # Provedor LLM - usando apenas Groq para simplicidade
 LLM_PROVIDER = "groq"
