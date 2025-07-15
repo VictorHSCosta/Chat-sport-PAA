@@ -1,5 +1,6 @@
 import { Header, MessageList, ChatInput } from './components'
 import { useChat, useChatEditor } from './hooks'
+import APIModeIndicator from './components/APIModeIndicator'
 import './App.css'
 
 function App() {
@@ -12,6 +13,7 @@ function App() {
 
   return (
     <div className="app">
+      <APIModeIndicator />
       <Header apiStatus={apiStatus} />
 
       <div className="chat-container">

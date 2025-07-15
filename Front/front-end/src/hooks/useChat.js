@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
-import { footballAPI } from '../services/api'
+import { footballAPI } from '../services/api_enhanced'
 
 export const useChat = () => {
   const [messages, setMessages] = useState([])
