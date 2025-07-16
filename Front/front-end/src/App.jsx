@@ -1,9 +1,10 @@
 import { Header, MessageList, ChatInput } from './components'
 import { useChat, useChatEditor } from './hooks'
+import APIModeIndicator from './components/APIModeIndicator'
 import './App.css'
 
 function App() {
-  const { messages, isTyping, messagesEndRef, sendMessage } = useChat()
+  const { messages, isTyping, messagesEndRef, sendMessage, apiStatus } = useChat()
   const { editor, handleSendMessage, handleKeyDown, setEditorContent } = useChatEditor(sendMessage)
 
   const handleExampleClick = (text) => {
@@ -12,7 +13,8 @@ function App() {
 
   return (
     <div className="app">
-      <Header />
+      <APIModeIndicator />
+      <Header apiStatus={apiStatus} />
 
       <div className="chat-container">
         <MessageList

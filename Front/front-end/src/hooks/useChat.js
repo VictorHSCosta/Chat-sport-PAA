@@ -1,19 +1,10 @@
 import { useState, useRef, useEffect } from 'react'
-import { getFootballResponse } from '../footballData.js'
-
-// Mock API para simular respostas do bot
-const mockFootballAPI = {
-  async getResponse(message) {
-    // Simula delay da API (1-3 segundos)
-    await new Promise(resolve => setTimeout(resolve, 1000 + Math.random() * 2000))
-    
-    return getFootballResponse(message)
-  }
-}
+import { footballAPI } from '../services/api_enhanced'
 
 export const useChat = () => {
   const [messages, setMessages] = useState([])
   const [isTyping, setIsTyping] = useState(false)
+  const [apiStatus, setApiStatus] = useState('checking')
   const messagesEndRef = useRef(null)
 
   const scrollToBottom = () => {
@@ -23,6 +14,18 @@ export const useChat = () => {
   useEffect(() => {
     scrollToBottom()
   }, [messages, isTyping])
+
+  useEffect(() => {
+    const checkApiHealth = async () => {
+      const healthData = await footballAPI.checkHealth()
+      setApiStatus(healthData.status === 'healthy' ? 'healthy' : 'unhealthy')
+    }
+    
+    checkApiHealth()
+    
+    const interval = setInterval(checkApiHealth, 30000)
+    return () => clearInterval(interval)
+  }, [])
 
   const sendMessage = async (content) => {
     if (!content?.trim()) return
@@ -38,24 +41,39 @@ export const useChat = () => {
     setIsTyping(true)
 
     try {
-      const response = await mockFootballAPI.getResponse(content)
+      console.log('🚀 Enviando para API:', content)
+      
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('Timeout: Resposta muito lenta')), 25000)
+      )
+      
+      const apiPromise = footballAPI.sendMessage(content)
+      
+      const responseData = await Promise.race([apiPromise, timeoutPromise])
+      console.log('✅ Resposta da API recebida:', responseData)
       
       const botMessage = {
         id: Date.now() + 1,
         type: 'bot',
-        content: response,
+        content: `${responseData.message.includes('cache') ? '⚡' : '�'} **${responseData.message.includes('cache') ? 'Resposta Rápida' : 'Resposta via Ollama'}**: ${responseData.answer}`,
         timestamp: new Date()
       }
 
       setMessages(prev => [...prev, botMessage])
+      setApiStatus('healthy')
     } catch (error) {
+      console.error('❌ Erro ao enviar mensagem:', error)
+      
       const errorMessage = {
         id: Date.now() + 1,
         type: 'bot',
-        content: 'Desculpe, houve um erro ao processar sua pergunta. Tente novamente.',
-        timestamp: new Date()
+        content: `❌ **Erro na API**: ${error.message}. Verifique se o servidor está rodando em http://localhost:8000`,
+        timestamp: new Date(),
+        isError: true
       }
+
       setMessages(prev => [...prev, errorMessage])
+      setApiStatus('unhealthy')
     } finally {
       setIsTyping(false)
     }
@@ -65,6 +83,7 @@ export const useChat = () => {
     messages,
     isTyping,
     messagesEndRef,
-    sendMessage
+    sendMessage,
+    apiStatus
   }
 }

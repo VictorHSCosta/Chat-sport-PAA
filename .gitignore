@@ -1,0 +1,31 @@
+# Ambientes virtuais Python
+backend/footbot/
+backend/venv/
+backend/.venv/
+
+# Variáveis de ambiente (API Keys)
+backend/.env
+.env
+
+# Node modules
+node_modules/
+Front/front-end/node_modules/
+
+# Logs
+*.log
+logs/
+
+# Cache Python
+__pycache__/
+*.pyc
+*.pyo
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Sistema
+.DS_Store
+Thumbs.db
